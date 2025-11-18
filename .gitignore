@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Build outputs
+dist/
+build/
+*.log
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# AWS
+.aws-sam/
+samconfig.toml
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.pem
+*.key
+
+# Terraform secrets and sensitive files
+backend/infrastructure/secrets.local
+backend/infrastructure/secrets.local.json
+backend/infrastructure/*.secrets
+backend/infrastructure/*.secrets.json
+backend/infrastructure/terraform.tfvars
+backend/infrastructure/terraform.tfstate*
+backend/infrastructure/.terraform/
+backend/infrastructure/*.tfplan
+

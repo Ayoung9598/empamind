@@ -1,0 +1,14 @@
+aws_region      = "us-east-1"
+environment     = "prod"
+user_pool_name  = "empamind-user-pool"
+chat_table_name = "empamind-chats"
+bedrock_model_id = "amazon.nova-micro-v1:0"
+
+# Frontend Hosting (optional - leave empty to skip frontend infrastructure) 
+frontend_bucket_name = "empamind-frontend-prod-ayomide-2025"
+
+# Terraform State Storage (optional - only if you want to create the state bucket)
+# state_bucket_name = "your-empamind-terraform-state"  # Must be globally unique
+# state_lock_table_name = "empamind-terraform-state-lock"
+
+

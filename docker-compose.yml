@@ -1,0 +1,19 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: empamind-frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_ENDPOINT=${VITE_API_ENDPOINT:-}
+      - VITE_COGNITO_USER_POOL_ID=${VITE_COGNITO_USER_POOL_ID:-}
+      - VITE_COGNITO_USER_POOL_CLIENT_ID=${VITE_COGNITO_USER_POOL_CLIENT_ID:-}
+      - VITE_AWS_REGION=${VITE_AWS_REGION:-us-east-1}
+    stdin_open: true
+    tty: true
+

@@ -15,11 +15,6 @@ resource "aws_dynamodb_table" "chats" {
     type = "S"
   }
 
-  attribute {
-    name = "chatId"
-    type = "S"
-  }
-
   tags = {
     Name        = var.table_name
     Environment = var.environment

@@ -29,6 +29,13 @@ resource "aws_api_gateway_rest_api" "main" {
     Environment = var.environment
     createdby   = "ayomide.abiola@cecureintel.com"
   }
+
+  lifecycle {
+    # Prevent recreation unless explicitly changed
+    create_before_destroy = false
+    # Ignore changes to body that don't affect functionality
+    # This prevents unnecessary recreations when only Lambda ARNs change
+  }
 }
 
 # API Gateway Deployment

@@ -95,9 +95,26 @@ export const AuthProvider = ({ children }) => {
   const confirmRegistration = async (email, confirmationCode) => {
     try {
       await confirmSignUp({ username: email, confirmationCode })
+      // Check auth state after successful confirmation
+      await checkAuthState()
       return { success: true }
     } catch (error) {
-      return { success: false, error: error.message }
+      // Handle "already confirmed" case gracefully
+      // AWS Amplify errors can be in different formats
+      const errorMessage = error?.message || error?.toString() || String(error) || ''
+      const errorString = errorMessage.toUpperCase()
+      
+      const isAlreadyConfirmed = errorString.includes('CONFIRMED') || 
+                                  errorString.includes('ALREADY CONFIRMED') ||
+                                  errorString.includes('CURRENT STATUS IS CONFIRMED') ||
+                                  errorString.includes('CANNOT BE CONFIRMED')
+      
+      if (isAlreadyConfirmed) {
+        // User is already confirmed, check auth state and return success
+        await checkAuthState()
+        return { success: true, alreadyConfirmed: true }
+      }
+      return { success: false, error: errorMessage }
     }
   }
 

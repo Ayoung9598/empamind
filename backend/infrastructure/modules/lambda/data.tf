@@ -32,3 +32,19 @@ data "archive_file" "get_chat_zip" {
   excludes    = ["__pycache__", "*.pyc", ".pytest_cache", "*.zip", "*.md"]
 }
 
+# Update chat handler
+data "archive_file" "update_chat_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/codes/update-chat"
+  output_path = "${path.module}/codes/update-chat.zip"
+  excludes    = ["__pycache__", "*.pyc", ".pytest_cache", "*.zip", "*.md"]
+}
+
+# Delete chat handler
+data "archive_file" "delete_chat_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/codes/delete-chat"
+  output_path = "${path.module}/codes/delete-chat.zip"
+  excludes    = ["__pycache__", "*.pyc", ".pytest_cache", "*.zip", "*.md"]
+}
+

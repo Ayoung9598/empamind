@@ -3,7 +3,7 @@ resource "aws_dynamodb_table" "chats" {
   billing_mode = "PAY_PER_REQUEST"
 
   hash_key  = "userId"
-  range_key = "timestamp"
+  range_key = "sk"
 
   attribute {
     name = "userId"
@@ -11,21 +11,13 @@ resource "aws_dynamodb_table" "chats" {
   }
 
   attribute {
-    name = "timestamp"
+    name = "sk"
     type = "S"
   }
 
   attribute {
     name = "chatId"
     type = "S"
-  }
-
-  # Global Secondary Index for querying messages by chatId
-  global_secondary_index {
-    name            = "chatId-index"
-    hash_key        = "chatId"
-    range_key       = "timestamp"
-    projection_type = "ALL"
   }
 
   tags = {

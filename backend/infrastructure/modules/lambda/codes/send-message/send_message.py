@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 import boto3
 from datetime import datetime
 from botocore.exceptions import ClientError
@@ -101,44 +102,97 @@ def generate_response(user_message, sentiment, chat_history=None):
         print(f'Error generating response: {e}')
         raise Exception('Failed to generate response. Please try again.')
 
-def save_message(user_id, chat_id, message, response, sentiment, chat_title=None):
-    """Save user message and AI response to DynamoDB"""
+def get_latest_chunk(user_id, chat_id):
+    """Get the latest chunk for a chat (highest chunkIndex)"""
+    table = dynamodb.Table(TABLE_NAME)
+    try:
+        # Query for all chunks of this chat, sorted by SK descending
+        response = table.query(
+            KeyConditionExpression='userId = :userId AND begins_with(sk, :chatPrefix)',
+            ExpressionAttributeValues={
+                ':userId': user_id,
+                ':chatPrefix': f"{chat_id}#"
+            },
+            ScanIndexForward=False,  # Descending order
+            Limit=1
+        )
+        items = response.get('Items', [])
+        if items:
+            return items[0]
+        return None
+    except ClientError as e:
+        print(f'Error getting latest chunk: {e}')
+        return None
+
+def save_message(user_id, chat_uuid, message, response, sentiment, chat_title=None):
+    """Save user message and AI response to DynamoDB in chunked format"""
     table = dynamodb.Table(TABLE_NAME)
     timestamp = datetime.utcnow().isoformat()
-    message_id = f"{int(datetime.utcnow().timestamp() * 1000)}-{os.urandom(4).hex()}"
     
-    # Generate title from first message if not provided
+    # Default chat title to chat_uuid if not provided
     if chat_title is None:
-        chat_title = message[:50] + "..." if len(message) > 50 else message
+        chat_title = chat_uuid
     
     try:
-        # Save user message
-        table.put_item(
-            Item={
-                'userId': user_id,
-                'timestamp': timestamp,
-                'chatId': chat_id,
-                'messageId': message_id,
+        # Get latest chunk for this chat
+        latest_chunk = get_latest_chunk(user_id, chat_uuid)
+        
+        # Create message pair
+        message_pair = [
+            {
                 'sender': 'user',
                 'text': message,
                 'sentiment': sentiment,
-                'chatTitle': chat_title
+                'timestamp': timestamp
+            },
+            {
+                'sender': 'ai',
+                'text': response,
+                'timestamp': timestamp
             }
-        )
+        ]
         
-        # Save AI response
-        response_timestamp = datetime.utcnow().isoformat()
-        response_id = f"{int(datetime.utcnow().timestamp() * 1000)}-{os.urandom(4).hex()}"
+        if latest_chunk is None:
+            # New chat - create chunk 0
+            chunk_index = 0
+            sk = f"{chat_uuid}#0"
+            messages = message_pair
+            message_count = 2
+        else:
+            # Existing chat - check if latest chunk has space
+            existing_messages = latest_chunk.get('messages', [])
+            message_count = latest_chunk.get('messageCount', len(existing_messages))
+            
+            # Check if chunk is full (~200 message pairs = 400 messages)
+            # Using 200 as safe limit (400KB / ~2KB per pair)
+            if message_count >= 400:  # 200 pairs * 2 messages
+                # Create new chunk
+                chunk_index = latest_chunk.get('chunkIndex', 0) + 1
+                sk = f"{chat_uuid}#{chunk_index}"
+                messages = message_pair
+                message_count = 2
+                # Preserve chat title from previous chunk
+                chat_title = latest_chunk.get('chatTitle', chat_uuid)
+            else:
+                # Append to existing chunk
+                chunk_index = latest_chunk.get('chunkIndex', 0)
+                sk = f"{chat_uuid}#{chunk_index}"
+                messages = existing_messages + message_pair
+                message_count = len(messages)
+                # Preserve existing chat title
+                chat_title = latest_chunk.get('chatTitle', chat_uuid)
+        
+        # Save or update chunk
         table.put_item(
             Item={
                 'userId': user_id,
-                'timestamp': response_timestamp,
-                'chatId': chat_id,
-                'messageId': response_id,
-                'sender': 'ai',
-                'text': response,
-                'sentiment': sentiment,
-                'chatTitle': chat_title
+                'sk': sk,
+                'chatId': chat_uuid,
+                'chunkIndex': chunk_index,
+                'timestamp': timestamp,
+                'messages': messages,
+                'chatTitle': chat_title,
+                'messageCount': message_count
             }
         )
     except ClientError as e:
@@ -174,15 +228,17 @@ def handler(event, context):
                 'body': json.dumps({'error': 'Message is required'})
             }
         
-        # Generate chat_id if not provided (new chat)
+        # Generate chat_uuid if not provided (new chat)
         if not chat_id:
-            chat_id = f"{user_id}-{int(datetime.utcnow().timestamp() * 1000)}"
+            chat_uuid = uuid.uuid4().hex
+        else:
+            chat_uuid = chat_id
         
         # Detect sentiment
         sentiment = detect_sentiment(message)
         
         # Get recent chat history for context (from this chat only)
-        history = get_chat_history(user_id, chat_id=chat_id, limit=20)
+        history = get_chat_history(user_id, chat_id=chat_uuid, limit=20)
         chat_history = [
             {
                 'sender': item.get('sender'),
@@ -195,7 +251,7 @@ def handler(event, context):
         response_text = generate_response(message, sentiment, chat_history)
         
         # Save messages
-        save_message(user_id, chat_id, message, response_text, sentiment, chat_title)
+        save_message(user_id, chat_uuid, message, response_text, sentiment, chat_title)
         
         return {
             'statusCode': 200,
@@ -203,7 +259,7 @@ def handler(event, context):
             'body': json.dumps({
                 'message': response_text,
                 'sentiment': sentiment,
-                'chatId': chat_id
+                'chatId': chat_uuid
             })
         }
         

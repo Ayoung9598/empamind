@@ -43,3 +43,33 @@ output "get_chat_name" {
   value       = aws_lambda_function.get_chat.function_name
 }
 
+output "update_chat_arn" {
+  description = "Update Chat Lambda function ARN"
+  value       = aws_lambda_function.update_chat.arn
+}
+
+output "update_chat_invoke_arn" {
+  description = "Update Chat Lambda invoke ARN for API Gateway"
+  value       = aws_lambda_function.update_chat.invoke_arn
+}
+
+output "update_chat_name" {
+  description = "Update Chat Lambda function name"
+  value       = aws_lambda_function.update_chat.function_name
+}
+
+output "delete_chat_arn" {
+  description = "Delete Chat Lambda function ARN"
+  value       = aws_lambda_function.delete_chat.arn
+}
+
+output "delete_chat_invoke_arn" {
+  description = "Delete Chat Lambda invoke ARN for API Gateway"
+  value       = aws_lambda_function.delete_chat.invoke_arn
+}
+
+output "delete_chat_name" {
+  description = "Delete Chat Lambda function name"
+  value       = aws_lambda_function.delete_chat.function_name
+}
+

@@ -7,6 +7,8 @@ locals {
     send_message_invoke_arn = var.send_message_invoke_arn
     list_chats_invoke_arn   = var.list_chats_invoke_arn
     get_chat_invoke_arn     = var.get_chat_invoke_arn
+    update_chat_invoke_arn  = var.update_chat_invoke_arn
+    delete_chat_invoke_arn  = var.delete_chat_invoke_arn
     user_pool_arn           = var.user_pool_arn
   })
 }
@@ -83,6 +85,22 @@ resource "aws_lambda_permission" "get_chat" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = var.get_chat_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "update_chat" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = var.update_chat_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "delete_chat" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = var.delete_chat_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }

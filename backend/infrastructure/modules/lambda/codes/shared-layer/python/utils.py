@@ -8,18 +8,22 @@ dynamodb = boto3.resource('dynamodb', region_name=os.environ.get('AWS_REGION', '
 TABLE_NAME = os.environ.get('CHAT_TABLE_NAME', 'empamind-chats')
 
 def get_user_id(event):
-    """Extract user ID from Cognito authorizer"""
+    """Extract user ID from Cognito authorizer and prefix with 'user_'"""
     request_context = event.get('requestContext', {})
     authorizer = request_context.get('authorizer', {})
     claims = authorizer.get('jwt', {}).get('claims', {}) or authorizer.get('claims', {})
-    return claims.get('sub') or authorizer.get('principalId') or 'anonymous'
+    raw_user_id = claims.get('sub') or authorizer.get('principalId') or 'anonymous'
+    # Prefix with 'user_' if not already prefixed
+    if raw_user_id.startswith('user_'):
+        return raw_user_id
+    return f"user_{raw_user_id}"
 
 def get_cors_headers():
     """Get CORS headers"""
     return {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-        'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+        'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
         'Content-Type': 'application/json'
     }
 
@@ -33,7 +37,7 @@ def get_chat_history(user_id, chat_id, limit=100, max_limit=1000):
         max_limit: Maximum allowed limit for safety (default: 1000)
     
     Returns:
-        List of message items from DynamoDB for the specified chat
+        List of individual message items from all chunks, sorted chronologically
     
     Raises:
         ValueError: If chat_id is not provided
@@ -45,30 +49,24 @@ def get_chat_history(user_id, chat_id, limit=100, max_limit=1000):
     limit = min(limit, max_limit)
     
     table = dynamodb.Table(TABLE_NAME)
-    all_items = []
+    all_chunks = []
     
     try:
-        # Get messages for a specific chat using GSI
+        # Query all chunks for this chat using main table
         query_params = {
-            'IndexName': 'chatId-index',
-            'KeyConditionExpression': 'chatId = :chatId',
+            'KeyConditionExpression': 'userId = :userId AND begins_with(sk, :chatPrefix)',
             'ExpressionAttributeValues': {
-                ':chatId': chat_id
+                ':userId': user_id,
+                ':chatPrefix': f"{chat_id}#"
             },
-            'ScanIndexForward': True,  # Oldest first for conversation flow
-            'Limit': limit
+            'ScanIndexForward': True  # Ascending order (chatId#0, chatId#1, ...)
         }
         
-        # Paginate through results up to limit
+        # Get all chunks
         while True:
             response = table.query(**query_params)
-            items = response.get('Items', [])
-            all_items.extend(items)
-            
-            # Check if we've reached the limit
-            if len(all_items) >= limit:
-                all_items = all_items[:limit]
-                break
+            chunks = response.get('Items', [])
+            all_chunks.extend(chunks)
             
             # Check if there are more items
             last_evaluated_key = response.get('LastEvaluatedKey')
@@ -78,7 +76,20 @@ def get_chat_history(user_id, chat_id, limit=100, max_limit=1000):
             # Continue with next page
             query_params['ExclusiveStartKey'] = last_evaluated_key
         
-        return all_items
+        # Merge all messages from all chunks
+        all_messages = []
+        for chunk in all_chunks:
+            messages = chunk.get('messages', [])
+            all_messages.extend(messages)
+        
+        # Sort by timestamp to ensure chronological order
+        all_messages.sort(key=lambda x: x.get('timestamp', ''))
+        
+        # Apply limit
+        if len(all_messages) > limit:
+            all_messages = all_messages[:limit]
+        
+        return all_messages
     except ClientError as e:
         print(f'Error fetching chat history: {e}')
         return []
@@ -87,10 +98,9 @@ def list_chats(user_id, batch_size=20, max_batches=50):
     """List all chat sessions for a user with efficient pagination
     
     Args:
-        user_id: User ID
-        batch_size: Number of messages to fetch per batch (default: 20)
-        max_batches: Maximum number of batches to process (default: 50 = 1000 messages max)
-                     This prevents unbounded queries while allowing proper chat grouping
+        user_id: User ID (prefixed with 'user_')
+        batch_size: Number of chunks to fetch per batch (default: 20)
+        max_batches: Maximum number of batches to process (default: 50)
     
     Returns:
         List of chat sessions with metadata, sorted by last message time (most recent first)
@@ -100,7 +110,7 @@ def list_chats(user_id, batch_size=20, max_batches=50):
     batch_count = 0
     
     try:
-        # Paginate through messages for user in small batches
+        # Query all chunks for user
         query_params = {
             'KeyConditionExpression': 'userId = :userId',
             'ExpressionAttributeValues': {
@@ -110,36 +120,44 @@ def list_chats(user_id, batch_size=20, max_batches=50):
             'Limit': batch_size
         }
         
-        # Process batches until we've seen enough or run out of messages
+        # Process batches until we've seen enough or run out of chunks
         while batch_count < max_batches:
             response = table.query(**query_params)
-            items = response.get('Items', [])
+            chunks = response.get('Items', [])
             
-            if not items:
+            if not chunks:
                 break
             
             # Process this batch and update chat metadata
-            for item in items:
-                chat_id = item.get('chatId')
+            for chunk in chunks:
+                chat_id = chunk.get('chatId')
                 if not chat_id:
                     continue
+                
+                chunk_index = chunk.get('chunkIndex', 0)
+                chunk_timestamp = chunk.get('timestamp', '')
+                chat_title = chunk.get('chatTitle', chat_id)
                 
                 if chat_id not in chats_dict:
                     # First time seeing this chat - initialize
                     chats_dict[chat_id] = {
                         'chatId': chat_id,
-                        'title': item.get('chatTitle', 'Untitled Chat'),
-                        'lastMessageTime': item.get('timestamp'),
-                        'createdAt': item.get('timestamp')
+                        'title': chat_title,
+                        'lastMessageTime': chunk_timestamp,
+                        'createdAt': chunk_timestamp,
+                        'maxChunkIndex': chunk_index
                     }
                 else:
                     # Update existing chat metadata
-                    # Update earliest timestamp (creation time)
-                    if item.get('timestamp') < chats_dict[chat_id].get('createdAt', item.get('timestamp')):
-                        chats_dict[chat_id]['createdAt'] = item.get('timestamp')
-                    # Update last message time if this is more recent
-                    if item.get('timestamp') > chats_dict[chat_id].get('lastMessageTime', ''):
-                        chats_dict[chat_id]['lastMessageTime'] = item.get('timestamp')
+                    # Track highest chunk index to get latest chunk info
+                    if chunk_index > chats_dict[chat_id].get('maxChunkIndex', -1):
+                        chats_dict[chat_id]['maxChunkIndex'] = chunk_index
+                        # Update title and timestamp from latest chunk
+                        chats_dict[chat_id]['title'] = chat_title
+                        chats_dict[chat_id]['lastMessageTime'] = chunk_timestamp
+                    # Update earliest timestamp (creation time) - should be from chunk 0
+                    if chunk_index == 0 and chunk_timestamp < chats_dict[chat_id].get('createdAt', chunk_timestamp):
+                        chats_dict[chat_id]['createdAt'] = chunk_timestamp
             
             batch_count += 1
             
@@ -152,11 +170,15 @@ def list_chats(user_id, batch_size=20, max_batches=50):
             query_params['ExclusiveStartKey'] = last_evaluated_key
         
         if batch_count >= max_batches:
-            print(f'Info: Processed {max_batches} batches ({batch_count * batch_size} messages) for user {user_id}')
+            print(f'Info: Processed {max_batches} batches for user {user_id}')
         
         # Convert to list and sort by last message time
         chats = list(chats_dict.values())
         chats.sort(key=lambda x: x.get('lastMessageTime', ''), reverse=True)
+        
+        # Remove internal tracking field
+        for chat in chats:
+            chat.pop('maxChunkIndex', None)
         
         return chats
     except ClientError as e:

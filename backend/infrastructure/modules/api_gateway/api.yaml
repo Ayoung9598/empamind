@@ -183,6 +183,92 @@ paths:
         uri: ${get_chat_invoke_arn}
         passthroughBehavior: when_no_match
         contentHandling: CONVERT_TO_TEXT
+    put:
+      summary: Update chat title
+      operationId: updateChat
+      security:
+        - CognitoAuthorizer: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+                  title:
+                    type: string
+        '400':
+          description: Bad request
+        '403':
+          description: Forbidden
+        '404':
+          description: Chat not found
+        '500':
+          description: Internal server error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: ${update_chat_invoke_arn}
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
+    delete:
+      summary: Delete a chat
+      operationId: deleteChat
+      security:
+        - CognitoAuthorizer: []
+      parameters:
+        - name: chatId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  chatId:
+                    type: string
+        '400':
+          description: Bad request
+        '403':
+          description: Forbidden
+        '404':
+          description: Chat not found
+        '500':
+          description: Internal server error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: ${delete_chat_invoke_arn}
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
     options:
       summary: CORS preflight
       operationId: optionsChatById
@@ -208,7 +294,7 @@ paths:
             statusCode: 200
             responseParameters:
               method.response.header.Access-Control-Allow-Origin: "'*'"
-              method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
 
 components:

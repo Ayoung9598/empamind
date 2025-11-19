@@ -94,6 +94,10 @@ module "api_gateway" {
   list_chats_name         = module.lambda.list_chats_name
   get_chat_invoke_arn     = module.lambda.get_chat_invoke_arn
   get_chat_name           = module.lambda.get_chat_name
+  update_chat_invoke_arn  = module.lambda.update_chat_invoke_arn
+  update_chat_name         = module.lambda.update_chat_name
+  delete_chat_invoke_arn  = module.lambda.delete_chat_invoke_arn
+  delete_chat_name         = module.lambda.delete_chat_name
   environment             = var.environment
 
   depends_on = [

@@ -113,3 +113,71 @@ resource "aws_lambda_function" "get_chat" {
   ]
 }
 
+# Update Chat Lambda function
+resource "aws_lambda_function" "update_chat" {
+  filename         = data.archive_file.update_chat_zip.output_path
+  function_name    = "empamind-update-chat-${var.environment}"
+  role            = aws_iam_role.lambda_execution.arn
+  handler         = "update_chat.handler"
+  runtime         = "python3.11"
+  timeout         = 15
+  memory_size     = 256
+
+  source_code_hash = data.archive_file.update_chat_zip.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_utils.arn]
+
+  environment {
+    variables = {
+      CHAT_TABLE_NAME = var.chat_table_name
+    }
+  }
+
+  tags = {
+    Name        = "empamind-update-chat"
+    Environment = var.environment
+    createdby   = "ayomide.abiola@cecureintel.com"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.lambda_custom,
+    aws_lambda_layer_version.shared_utils,
+    data.archive_file.update_chat_zip
+  ]
+}
+
+# Delete Chat Lambda function
+resource "aws_lambda_function" "delete_chat" {
+  filename         = data.archive_file.delete_chat_zip.output_path
+  function_name    = "empamind-delete-chat-${var.environment}"
+  role            = aws_iam_role.lambda_execution.arn
+  handler         = "delete_chat.handler"
+  runtime         = "python3.11"
+  timeout         = 15
+  memory_size     = 256
+
+  source_code_hash = data.archive_file.delete_chat_zip.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_utils.arn]
+
+  environment {
+    variables = {
+      CHAT_TABLE_NAME = var.chat_table_name
+    }
+  }
+
+  tags = {
+    Name        = "empamind-delete-chat"
+    Environment = var.environment
+    createdby   = "ayomide.abiola@cecureintel.com"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.lambda_custom,
+    aws_lambda_layer_version.shared_utils,
+    data.archive_file.delete_chat_zip
+  ]
+}
+

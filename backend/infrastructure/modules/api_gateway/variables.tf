@@ -38,6 +38,26 @@ variable "get_chat_name" {
   type        = string
 }
 
+variable "update_chat_invoke_arn" {
+  description = "Update Chat Lambda invoke ARN for API Gateway"
+  type        = string
+}
+
+variable "update_chat_name" {
+  description = "Update Chat Lambda function name"
+  type        = string
+}
+
+variable "delete_chat_invoke_arn" {
+  description = "Delete Chat Lambda invoke ARN for API Gateway"
+  type        = string
+}
+
+variable "delete_chat_name" {
+  description = "Delete Chat Lambda function name"
+  type        = string
+}
+
 variable "environment" {
   description = "Environment name"
   type        = string

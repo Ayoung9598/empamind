@@ -31,17 +31,17 @@ def handler(event, context):
             }
         
         # Get all messages for the chat (up to max limit of 1000)
+        # get_chat_history now returns flattened list of messages from all chunks
         history = get_chat_history(user_id, chat_id=chat_id, limit=1000)
-        messages = sorted(history, key=lambda x: x.get('timestamp', ''))
         messages = [
             {
-                'id': item.get('messageId'),
-                'text': item.get('text'),
-                'sender': item.get('sender'),
-                'timestamp': item.get('timestamp'),
-                'sentiment': item.get('sentiment')
+                'id': f"{item.get('timestamp', '')}-{item.get('sender', '')}",  # Generate ID from timestamp and sender
+                'text': item.get('text', ''),
+                'sender': item.get('sender', ''),
+                'timestamp': item.get('timestamp', ''),
+                'sentiment': item.get('sentiment')  # May not exist for AI messages
             }
-            for item in messages
+            for item in history
         ]
         
         return {

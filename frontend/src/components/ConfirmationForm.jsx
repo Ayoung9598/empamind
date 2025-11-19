@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import './ConfirmationForm.css'
 
-const ConfirmationForm = ({ email, onBack }) => {
+const ConfirmationForm = ({ email, onBack, onConfirmed }) => {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const { confirmRegistration, resendConfirmationCode } = useAuth()
@@ -17,8 +18,47 @@ const ConfirmationForm = ({ email, onBack }) => {
     const result = await confirmRegistration(email, code)
     setLoading(false)
 
-    if (!result.success) {
-      setError(result.error || 'Invalid confirmation code. Please try again.')
+    // Debug logging (remove in production)
+    console.log('Confirmation result:', result)
+
+    if (result.success) {
+      setSuccess(true)
+      setError('')
+      // Call onConfirmed callback if provided (to switch to login form)
+      if (onConfirmed) {
+        console.log('Calling onConfirmed callback')
+        setTimeout(() => {
+          onConfirmed()
+        }, 2000)
+      } else {
+        console.warn('onConfirmed callback not provided')
+      }
+    } else {
+      // Handle "already confirmed" error message more gracefully
+      const errorMsg = result.error || ''
+      const errorString = errorMsg.toUpperCase()
+      const isAlreadyConfirmed = errorString.includes('CONFIRMED') || 
+                                  errorString.includes('ALREADY CONFIRMED') ||
+                                  errorString.includes('CURRENT STATUS IS CONFIRMED') ||
+                                  errorString.includes('CANNOT BE CONFIRMED')
+      
+      console.log('Error detected:', errorMsg, 'Is already confirmed:', isAlreadyConfirmed)
+      
+      if (isAlreadyConfirmed) {
+        setSuccess(true)
+        setError('')
+        // Call onConfirmed callback even for already confirmed users
+        if (onConfirmed) {
+          console.log('Calling onConfirmed callback for already confirmed user')
+          setTimeout(() => {
+            onConfirmed()
+          }, 2000)
+        } else {
+          console.warn('onConfirmed callback not provided for already confirmed user')
+        }
+      } else {
+        setError(result.error || 'Invalid confirmation code. Please try again.')
+      }
     }
   }
 
@@ -34,6 +74,25 @@ const ConfirmationForm = ({ email, onBack }) => {
     } else {
       setError(result.error || 'Failed to resend code.')
     }
+  }
+
+  if (success) {
+    return (
+      <div className="confirmation-form">
+        <h3>Email Confirmed! ✅</h3>
+        <p className="confirmation-text">
+          Your email <strong>{email}</strong> has been successfully confirmed.
+        </p>
+        <p className="confirmation-text">
+          You can now sign in to start using EmpaMind.
+        </p>
+        {onConfirmed && (
+          <p className="confirmation-text" style={{ color: '#666', fontSize: '0.9em' }}>
+            Redirecting to sign in...
+          </p>
+        )}
+      </div>
+    )
   }
 
   return (

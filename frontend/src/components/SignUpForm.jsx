@@ -40,7 +40,18 @@ const SignUpForm = ({ onSwitchToLogin }) => {
   }
 
   if (requiresConfirmation) {
-    return <ConfirmationForm email={email} onBack={() => setRequiresConfirmation(false)} />
+    return (
+      <ConfirmationForm 
+        email={email} 
+        onBack={() => setRequiresConfirmation(false)}
+        onConfirmed={() => {
+          // Switch to login form after successful confirmation
+          if (onSwitchToLogin) {
+            onSwitchToLogin()
+          }
+        }}
+      />
+    )
   }
 
   return (

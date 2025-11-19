@@ -43,13 +43,19 @@ jobs:
           echo "Event: ${{ github.event_name }}"
           git diff --name-only HEAD~1 || echo "No previous commit"
 
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ] || [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "Error: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY secrets are required"
+            exit 1
+          fi
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
-        continue-on-error: false
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -139,6 +145,17 @@ jobs:
           VITE_API_ENDPOINT: ${{ steps.get-api-endpoint.outputs.api_endpoint }}
           VITE_AWS_REGION: ${{ env.AWS_REGION }}
 
+      - name: Validate frontend secrets
+        run: |
+          if [ -z "${{ secrets.VITE_COGNITO_USER_POOL_ID }}" ] || [ -z "${{ secrets.VITE_COGNITO_USER_POOL_CLIENT_ID }}" ]; then
+            echo "Error: VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_USER_POOL_CLIENT_ID secrets are required"
+            exit 1
+          fi
+          if [ -z "${{ secrets.S3_BUCKET_NAME }}" ]; then
+            echo "Error: S3_BUCKET_NAME secret is required for frontend deployment"
+            exit 1
+          fi
+
       - name: Configure AWS credentials for S3
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -147,7 +164,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Deploy to S3
-        if: ${{ secrets.S3_BUCKET_NAME }}
         run: |
           aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete
           if [ -n "${{ secrets.CLOUDFRONT_DIST_ID }}" ]; then

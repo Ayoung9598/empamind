@@ -34,6 +34,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Debug - Show changed files
+        run: |
+          echo "Branch: ${{ github.ref }}"
+          echo "Event: ${{ github.event_name }}"
+          git diff --name-only HEAD~1 || echo "No previous commit"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -41,6 +49,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+        continue-on-error: false
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -52,17 +61,18 @@ jobs:
         run: terraform init
 
       - name: Terraform Format Check
-        run: terraform fmt -check
+        run: terraform fmt -check || (echo "Formatting issues found. Run 'terraform fmt' to fix." && exit 1)
 
       - name: Terraform Validate
-        run: terraform validate
+        run: terraform validate || (echo "Validation failed. Check the errors above." && exit 1)
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         continue-on-error: true
+        id: plan
 
       - name: Terraform Apply
-        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.plan.outcome == 'success'
         run: terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs

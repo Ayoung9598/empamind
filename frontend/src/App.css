@@ -1,7 +1,9 @@
+/* Mobile-first responsive design */
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 .app-header {
@@ -9,11 +11,12 @@
   background-size: 200% 200%;
   animation: gradientShift 15s ease infinite;
   color: white;
-  padding: 2.5rem 2rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   box-shadow: var(--shadow-xl);
   position: relative;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .app-header::before {
@@ -33,22 +36,24 @@
 }
 
 .app-header h1 {
-  font-size: 2.75rem;
+  font-size: 1.75rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
   letter-spacing: -0.02em;
   text-shadow: 0 2px 20px rgba(0, 0, 0, 0.3);
   position: relative;
   z-index: 1;
+  line-height: 1.2;
 }
 
 .app-header .subtitle {
-  font-size: 1.15rem;
+  font-size: 0.9375rem;
   opacity: 0.95;
   font-weight: 400;
   letter-spacing: 0.01em;
   position: relative;
   z-index: 1;
+  line-height: 1.4;
 }
 
 .app-main {
@@ -56,24 +61,50 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 2rem;
-  max-width: 1400px;
+  padding: 1rem;
+  max-width: 100%;
   width: 100%;
   margin: 0 auto;
   position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 
-@media (max-width: 768px) {
+/* Tablet and up */
+@media (min-width: 768px) {
+  .app-header {
+    padding: 2rem 1.5rem;
+  }
+
   .app-header h1 {
-    font-size: 2rem;
+    font-size: 2.5rem;
   }
   
   .app-header .subtitle {
-    font-size: 1rem;
+    font-size: 1.125rem;
   }
   
   .app-main {
-    padding: 1rem;
+    padding: 1.5rem;
   }
 }
 
+/* Desktop */
+@media (min-width: 1024px) {
+  .app-header {
+    padding: 2.5rem 2rem;
+  }
+
+  .app-header h1 {
+    font-size: 2.75rem;
+  }
+  
+  .app-header .subtitle {
+    font-size: 1.15rem;
+  }
+  
+  .app-main {
+    padding: 2rem;
+    max-width: 1400px;
+  }
+}

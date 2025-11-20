@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback } from 'react'
 import { useAuth } from './AuthContext'
-import { sendMessage, getChatHistory, listChats } from '../services/api'
+import { sendMessage, getChatHistory, listChats, updateChat, deleteChat } from '../services/api'
 
 const ChatContext = createContext()
 
@@ -183,6 +183,62 @@ export const ChatProvider = ({ children }) => {
     setError(null)
   }, [])
 
+  const updateChatTitle = useCallback(async (chatId, newTitle) => {
+    if (!chatId || !newTitle?.trim()) return false
+
+    // Skip API call if endpoint is not configured (for local UI testing)
+    if (!import.meta.env.VITE_API_ENDPOINT) {
+      setChatList((prev) =>
+        prev.map((chat) =>
+          chat.chatId === chatId ? { ...chat, title: newTitle.trim() } : chat
+        )
+      )
+      return true
+    }
+
+    try {
+      await updateChat(chatId, newTitle)
+      setChatList((prev) =>
+        prev.map((chat) =>
+          chat.chatId === chatId ? { ...chat, title: newTitle.trim() } : chat
+        )
+      )
+      return true
+    } catch (err) {
+      setError(err.message || 'Failed to update chat title')
+      console.error('Failed to update chat:', err)
+      return false
+    }
+  }, [])
+
+  const removeChat = useCallback(async (chatId) => {
+    if (!chatId) return false
+
+    // Skip API call if endpoint is not configured (for local UI testing)
+    if (!import.meta.env.VITE_API_ENDPOINT) {
+      setChatList((prev) => prev.filter((chat) => chat.chatId !== chatId))
+      if (currentChatId === chatId) {
+        setCurrentChatId(null)
+        setMessages([])
+      }
+      return true
+    }
+
+    try {
+      await deleteChat(chatId)
+      setChatList((prev) => prev.filter((chat) => chat.chatId !== chatId))
+      if (currentChatId === chatId) {
+        setCurrentChatId(null)
+        setMessages([])
+      }
+      return true
+    } catch (err) {
+      setError(err.message || 'Failed to delete chat')
+      console.error('Failed to delete chat:', err)
+      return false
+    }
+  }, [currentChatId])
+
   const value = {
     messages,
     currentChatId,
@@ -195,6 +251,8 @@ export const ChatProvider = ({ children }) => {
     clearChat,
     loadChatHistory,
     loadChatList,
+    updateChatTitle,
+    removeChat,
   }
 
   return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>

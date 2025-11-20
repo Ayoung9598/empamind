@@ -130,6 +130,7 @@ jobs:
           echo "## Backend Deployment Complete 🚀" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Terraform Outputs:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
           USER_POOL_ID=$(terraform output -raw user_pool_id 2>/dev/null || echo "")
           USER_POOL_CLIENT_ID=$(terraform output -raw user_pool_client_id 2>/dev/null || echo "")
           API_ENDPOINT=$(terraform output -raw api_endpoint 2>/dev/null || echo "")

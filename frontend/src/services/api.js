@@ -74,3 +74,20 @@ export const listChats = async () => {
   return apiClient.get('/chats')
 }
 
+export const updateChat = async (chatId, title) => {
+  if (!chatId) {
+    throw new Error('chatId is required to update chat')
+  }
+  if (!title || !title.trim()) {
+    throw new Error('title is required to update chat')
+  }
+  return apiClient.put(`/chat/${chatId}`, { title: title.trim() })
+}
+
+export const deleteChat = async (chatId) => {
+  if (!chatId) {
+    throw new Error('chatId is required to delete chat')
+  }
+  return apiClient.delete(`/chat/${chatId}`)
+}
+

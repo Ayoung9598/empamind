@@ -19,7 +19,9 @@ resource "aws_iam_role_policy" "lambda_custom" {
           "comprehend:DetectSentiment",
           "dynamodb:PutItem",
           "dynamodb:Query",
-          "dynamodb:GetItem"
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:DeleteItem"
         ]
         Resource = "*"
       }

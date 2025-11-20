@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { sendMessage, getChatHistory, listChats, updateChat, deleteChat } from '../services/api'
 
@@ -19,6 +19,16 @@ export const ChatProvider = ({ children }) => {
   const [chatList, setChatList] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const streamingIntervalRef = useRef(null)
+  
+  // Cleanup streaming interval on unmount
+  useEffect(() => {
+    return () => {
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current)
+      }
+    }
+  }, [])
 
   const loadChatList = useCallback(async () => {
     if (!user) return
@@ -118,17 +128,76 @@ export const ChatProvider = ({ children }) => {
 
     // Skip API call if endpoint is not configured (for local UI testing)
     if (!import.meta.env.VITE_API_ENDPOINT) {
-      // Simulate AI response for UI testing
+      // Simulate AI response with streaming for UI testing
       setTimeout(async () => {
-        const aiMessage = {
-          id: (Date.now() + 1).toString(),
-          text: 'I understand how you\'re feeling. This is a demo response since the backend is not configured. When you deploy the backend, you\'ll get real AI-powered empathetic responses.',
+        const fullText = 'I understand how you\'re feeling. This is a demo response since the backend is not configured. When you deploy the backend, you\'ll get real AI-powered empathetic responses.'
+        const aiMessageId = `ai-demo-${Date.now()}`
+        
+        // Stop loading first
+        setLoading(false)
+        
+        // Add empty message first for streaming effect
+        const streamingMessage = {
+          id: aiMessageId,
+          text: '',
           sender: 'ai',
           timestamp: new Date().toISOString(),
           sentiment: 'NEUTRAL',
+          isStreaming: true,
         }
-        setMessages((prev) => [...prev, aiMessage])
-        setLoading(false)
+        
+        // Use functional update
+        setMessages((prev) => {
+          const exists = prev.find(msg => msg.id === aiMessageId)
+          if (exists) return prev
+          return [...prev, streamingMessage]
+        })
+        
+        // Clear any existing streaming interval
+        if (streamingIntervalRef.current) {
+          clearInterval(streamingIntervalRef.current)
+        }
+        
+        const startStreaming = () => {
+          // Stream the response character by character
+          let currentIndex = 0
+          const streamSpeed = 20
+          
+          streamingIntervalRef.current = setInterval(() => {
+            if (currentIndex < fullText.length) {
+              const chunk = fullText.slice(0, currentIndex + 1)
+              const stillStreaming = currentIndex < fullText.length - 1
+              
+              setMessages((prev) => {
+                return prev.map((msg) => {
+                  if (msg.id === aiMessageId) {
+                    return { 
+                      ...msg, 
+                      text: chunk, 
+                      isStreaming: stillStreaming 
+                    }
+                  }
+                  return msg
+                })
+              })
+              
+              currentIndex++
+            } else {
+              if (streamingIntervalRef.current) {
+                clearInterval(streamingIntervalRef.current)
+                streamingIntervalRef.current = null
+              }
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiMessageId ? { ...msg, isStreaming: false } : msg
+                )
+              )
+            }
+          }, streamSpeed)
+        }
+        
+        // Small delay to ensure state is set
+        setTimeout(startStreaming, 100)
         
         // Create new chat if needed
         if (!currentChatId) {
@@ -136,7 +205,7 @@ export const ChatProvider = ({ children }) => {
           setCurrentChatId(newChatId)
           await loadChatList()
         }
-      }, 1000) // Simulate 1 second delay
+      }, 500) // Simulate 0.5 second delay before streaming starts
       return
     }
 
@@ -150,19 +219,91 @@ export const ChatProvider = ({ children }) => {
         await loadChatList()
       }
       
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        text: response.message,
+      // Create AI message with streaming effect
+      const aiMessageId = `ai-${Date.now()}`
+      const fullText = (response.message || response.response || '').trim()
+      const sentiment = response.sentiment
+      
+      if (!fullText) {
+        console.error('No message in response:', response)
+        throw new Error('No response message received')
+      }
+      
+      console.log('Starting stream for message:', fullText.substring(0, 50) + '...')
+      
+      // Stop loading first
+      setLoading(false)
+      
+      // Add empty message first for streaming effect
+      const streamingMessage = {
+        id: aiMessageId,
+        text: '',
         sender: 'ai',
         timestamp: new Date().toISOString(),
-        sentiment: response.sentiment,
+        sentiment: sentiment,
+        isStreaming: true,
       }
-
-      setMessages((prev) => [...prev, aiMessage])
+      
+      // Use functional update to ensure we're working with latest state
+      setMessages((prev) => {
+        // Check if message already exists (shouldn't, but safety check)
+        const exists = prev.find(msg => msg.id === aiMessageId)
+        if (exists) return prev
+        return [...prev, streamingMessage]
+      })
+      
+      // Clear any existing streaming interval
+      if (streamingIntervalRef.current) {
+        clearInterval(streamingIntervalRef.current)
+        streamingIntervalRef.current = null
+      }
+      
+      // Use setTimeout instead of await to avoid blocking
+      setTimeout(() => {
+        // Stream the response character by character (like ChatGPT)
+        let currentIndex = 0
+        const streamSpeed = 20 // milliseconds per character (adjust for speed)
+        
+        console.log('Starting streaming interval, text length:', fullText.length)
+        
+        streamingIntervalRef.current = setInterval(() => {
+          if (currentIndex < fullText.length) {
+            const chunk = fullText.slice(0, currentIndex + 1)
+            const stillStreaming = currentIndex < fullText.length - 1
+            
+            setMessages((prev) => {
+              return prev.map((msg) => {
+                if (msg.id === aiMessageId) {
+                  return { 
+                    ...msg, 
+                    text: chunk, 
+                    isStreaming: stillStreaming 
+                  }
+                }
+                return msg
+              })
+            })
+            
+            currentIndex++
+          } else {
+            console.log('Streaming complete')
+            if (streamingIntervalRef.current) {
+              clearInterval(streamingIntervalRef.current)
+              streamingIntervalRef.current = null
+            }
+            // Mark streaming as complete
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === aiMessageId ? { ...msg, isStreaming: false } : msg
+              )
+            )
+          }
+        }, streamSpeed)
+      }, 100)
+      
     } catch (err) {
       setError(err.message || 'Failed to send message. Please try again.')
       console.error('Chat error:', err)
-    } finally {
       setLoading(false)
     }
   }, [currentChatId, loadChatList])

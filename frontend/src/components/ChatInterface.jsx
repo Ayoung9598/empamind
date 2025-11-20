@@ -37,6 +37,17 @@ const ChatInterface = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages, loading])
+  
+  // Auto-scroll during streaming
+  useEffect(() => {
+    const hasStreaming = messages.some(msg => msg.isStreaming)
+    if (hasStreaming) {
+      const scrollInterval = setInterval(() => {
+        scrollToBottom()
+      }, 100)
+      return () => clearInterval(scrollInterval)
+    }
+  }, [messages])
 
   useEffect(() => {
     // Auto-focus input when component mounts or chat changes
@@ -58,10 +69,15 @@ const ChatInterface = () => {
   }
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // On mobile, allow Enter to create new lines
+    // On desktop, Shift+Enter creates new line, Enter sends
+    const isMobile = window.innerWidth < 768
+    if (e.key === 'Enter' && !e.shiftKey && !isMobile) {
       e.preventDefault()
       handleSubmit(e)
     }
+    // On mobile, Enter creates new line (default behavior)
+    // User can use the send button to submit
   }
 
   const toggleSidebar = () => {

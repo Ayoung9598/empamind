@@ -10,9 +10,25 @@ const ChatInterface = () => {
   const { messages, currentChatId, loading, error, addMessage, startNewChat, loadChatList } = useChat()
   const { logout } = useAuth()
   const [inputText, setInputText] = useState('')
-  const [sidebarVisible, setSidebarVisible] = useState(true)
+  // Sidebar hidden by default on mobile, visible on desktop
+  const [sidebarVisible, setSidebarVisible] = useState(() => {
+    return window.innerWidth >= 768
+  })
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
+  
+  // Update sidebar visibility on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarVisible(true)
+      } else {
+        setSidebarVisible(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     loadChatList()
@@ -54,7 +70,23 @@ const ChatInterface = () => {
 
   return (
     <div className={`chat-container ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
-      <ChatSidebar isVisible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
+      {sidebarVisible && (
+        <div 
+          className="sidebar-overlay"
+          onClick={() => setSidebarVisible(false)}
+          aria-label="Close sidebar"
+        />
+      )}
+      <ChatSidebar 
+        isVisible={sidebarVisible} 
+        onClose={() => setSidebarVisible(false)}
+        onChatSelect={() => {
+          // Auto-hide on mobile after selecting
+          if (window.innerWidth < 768) {
+            setSidebarVisible(false)
+          }
+        }}
+      />
       <div className="chat-main">
         <div className="chat-header">
           <button 

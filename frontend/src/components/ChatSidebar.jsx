@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useChat } from '../context/ChatContext'
 import './ChatSidebar.css'
 
-const ChatSidebar = ({ isVisible, onClose }) => {
+const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
   const { chatList, currentChatId, selectChat, startNewChat, loadChatList, updateChatTitle, removeChat } = useChat()
   const [openMenuId, setOpenMenuId] = useState(null)
   const [editingChatId, setEditingChatId] = useState(null)
@@ -88,19 +88,15 @@ const ChatSidebar = ({ isVisible, onClose }) => {
   const handleChatClick = (chatId) => {
     if (!editingChatId) {
       selectChat(chatId)
-      // Auto-hide sidebar on mobile after selecting a chat
-      if (window.innerWidth < 768 && onClose) {
-        onClose()
+      // Notify parent to handle sidebar closing
+      if (onChatSelect) {
+        onChatSelect()
       }
     }
   }
 
-  if (!isVisible) {
-    return null
-  }
-
   return (
-    <div className="chat-sidebar">
+    <div className={`chat-sidebar ${isVisible ? 'visible' : ''}`}>
       <div className="sidebar-header">
         <h3>Your Chats</h3>
         <button onClick={startNewChat} className="new-chat-button" title="New Chat" aria-label="New Chat">

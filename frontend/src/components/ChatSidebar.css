@@ -1,17 +1,51 @@
 /* Mobile-first responsive design */
 .chat-sidebar {
-  width: 100%;
+  width: 280px;
+  max-width: 85vw;
   background: var(--surface);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 1000;
   min-height: 0;
   max-height: 100%;
   overflow: hidden;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
-  flex-shrink: 0;
+  transform: translateX(-100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+.chat-sidebar.visible {
+  transform: translateX(0);
+}
+
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .sidebar-overlay {
+    display: block;
+  }
+  
+  .chat-container:not(.sidebar-hidden) .sidebar-overlay {
+    opacity: 1;
+    pointer-events: all;
+  }
 }
 
 .sidebar-header {
@@ -60,6 +94,7 @@
   border: none;
   flex-shrink: 0;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .new-chat-button:hover {
@@ -140,7 +175,6 @@
 .chat-item:hover {
   background: var(--surface-elevated);
   border-color: var(--border-light);
-  transform: translateX(2px);
 }
 
 .chat-item:hover::before {
@@ -148,15 +182,14 @@
 }
 
 .chat-item.active {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: var(--surface-elevated);
   color: white;
-  border-color: transparent;
-  box-shadow: var(--shadow), var(--shadow-glow);
-  transform: translateX(0);
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow);
 }
 
 .chat-item.active::before {
-  display: none;
+  transform: scaleY(1);
 }
 
 .chat-item.editing {
@@ -166,7 +199,7 @@
 
 .chat-item.active .chat-title,
 .chat-item.active .chat-time {
-  color: white;
+  color: var(--text-primary);
 }
 
 .chat-item-content {
@@ -179,7 +212,7 @@
 
 .chat-title {
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-primary);
   margin: 0;
   overflow: hidden;
@@ -190,7 +223,7 @@
 }
 
 .chat-item.active .chat-title {
-  color: white;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -203,7 +236,7 @@
 }
 
 .chat-item.active .chat-time {
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-secondary);
 }
 
 /* Edit form */
@@ -217,7 +250,7 @@
   border: 2px solid var(--primary-color);
   border-radius: 8px;
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: 500;
   background: var(--background);
   color: var(--text-primary);
   font-family: inherit;
@@ -252,32 +285,18 @@
   touch-action: manipulation;
 }
 
-/* Show on hover for desktop, always visible on mobile */
-@media (hover: hover) {
-  .chat-menu-button {
-    opacity: 0;
-    pointer-events: none;
-  }
-  
-  .chat-item:hover .chat-menu-button,
-  .chat-item.active .chat-menu-button {
-    opacity: 1;
-    pointer-events: all;
-  }
-}
-
 .chat-menu-button:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
 }
 
 .chat-item.active .chat-menu-button {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
 }
 
 .chat-item.active .chat-menu-button:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
 }
 
 /* Chat menu dropdown */
@@ -290,7 +309,7 @@
   border-radius: 10px;
   box-shadow: var(--shadow-lg);
   min-width: 140px;
-  z-index: 1000;
+  z-index: 1001;
   overflow: hidden;
   animation: slideDown 0.2s ease-out;
 }
@@ -342,39 +361,25 @@
   color: var(--error);
 }
 
-/* Mobile specific improvements */
-@media (max-width: 767px) {
-  .chat-sidebar {
-    max-height: 40vh;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-  
-  .chat-item {
-    padding: 0.75rem;
-    min-height: 56px;
-  }
-  
-  .chat-menu {
-    min-width: 120px;
-    right: -8px;
-  }
-  
-  .menu-item {
-    padding: 0.875rem 1rem;
-    font-size: 0.875rem;
-  }
-}
-
-/* Tablet and up */
+/* Tablet and up - sidebar becomes part of layout */
 @media (min-width: 768px) {
   .chat-sidebar {
+    position: relative;
     width: 320px;
     min-width: 280px;
     max-width: 320px;
-    max-height: 100%;
+    transform: none;
+    box-shadow: none;
   }
-
+  
+  .chat-sidebar.visible {
+    transform: none;
+  }
+  
+  .sidebar-overlay {
+    display: none;
+  }
+  
   .sidebar-header {
     padding: 1.5rem;
   }
@@ -406,5 +411,6 @@
 @media (min-width: 1024px) {
   .chat-sidebar {
     width: 360px;
+    max-width: 360px;
   }
 }

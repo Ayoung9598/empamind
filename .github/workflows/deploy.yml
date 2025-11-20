@@ -231,16 +231,28 @@ jobs:
       - name: Deploy to S3
         run: |
           S3_BUCKET="${{ steps.terraform-frontend-outputs.outputs.s3_bucket }}"
-          CLOUDFRONT_ID="${{ steps.terraform-frontend-outputs.outputs.cloudfront_id }}"
           if [ -z "$S3_BUCKET" ]; then
             echo "Error: S3 bucket name not available"
             exit 1
           fi
           echo "Deploying to S3 bucket: $S3_BUCKET"
           aws s3 sync ./dist s3://$S3_BUCKET --delete
-          if [ -n "$CLOUDFRONT_ID" ]; then
-            echo "Invalidating CloudFront cache: $CLOUDFRONT_ID"
-            aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"
+          echo "✅ Frontend files deployed successfully to S3"
+
+      - name: Invalidate CloudFront cache
+        continue-on-error: true
+        run: |
+          CLOUDFRONT_ID="${{ steps.terraform-frontend-outputs.outputs.cloudfront_id }}"
+          if [ -n "$CLOUDFRONT_ID" ] && [ "$CLOUDFRONT_ID" != "null" ]; then
+            echo "Invalidating CloudFront cache for distribution: $CLOUDFRONT_ID"
+            aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*" || {
+              echo "⚠️ Warning: CloudFront invalidation failed. This is non-critical - files are already deployed."
+              echo "The distribution may still be deploying, or the ID may be incorrect."
+              echo "Files will be available once CloudFront finishes deploying (usually 5-15 minutes)."
+            }
+          else
+            echo "⚠️ CloudFront distribution ID not available. Skipping cache invalidation."
+            echo "Files are deployed to S3 and will be available via CloudFront once the distribution is ready."
           fi
 
       - name: Deployment summary

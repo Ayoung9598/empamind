@@ -63,6 +63,27 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
+      - name: Remove stale state locks
+        run: |
+          echo "Checking for stale state locks..."
+          # Get all locks from the table
+          LOCK_IDS=$(aws dynamodb scan --table-name empamind-terraform-state-lock --region us-east-1 --query 'Items[*].LockID.S' --output text 2>/dev/null || echo "")
+          if [ -n "$LOCK_IDS" ] && [ "$LOCK_IDS" != "None" ]; then
+            for lock_id in $LOCK_IDS; do
+              if [ -n "$lock_id" ] && [ "$lock_id" != "None" ]; then
+                echo "Deleting stale lock: $lock_id"
+                aws dynamodb delete-item \
+                  --table-name empamind-terraform-state-lock \
+                  --key "{\"LockID\": {\"S\": \"$lock_id\"}}" \
+                  --region us-east-1 || echo "Failed to delete lock $lock_id"
+              fi
+            done
+            echo "Lock cleanup complete"
+          else
+            echo "No locks found"
+          fi
+        continue-on-error: true
+
       - name: Terraform Init
         run: terraform init
 
@@ -71,18 +92,6 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate || (echo "Validation failed. Check the errors above." && exit 1)
-
-      - name: Check and unlock stale state lock
-        run: |
-          LOCK_ID=$(aws dynamodb scan --table-name empamind-terraform-state-lock --region us-east-1 --query 'Items[0].LockID.S' --output text 2>/dev/null || echo "")
-          if [ -n "$LOCK_ID" ] && [ "$LOCK_ID" != "None" ]; then
-            echo "Found stale lock: $LOCK_ID"
-            echo "Attempting to force unlock..."
-            terraform force-unlock -force "$LOCK_ID" || echo "Unlock failed or lock already released"
-          else
-            echo "No stale lock found"
-          fi
-        continue-on-error: true
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan

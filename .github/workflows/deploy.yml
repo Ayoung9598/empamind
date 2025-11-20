@@ -72,6 +72,18 @@ jobs:
       - name: Terraform Validate
         run: terraform validate || (echo "Validation failed. Check the errors above." && exit 1)
 
+      - name: Check and unlock stale state lock
+        run: |
+          LOCK_ID=$(aws dynamodb scan --table-name empamind-terraform-state-lock --region us-east-1 --query 'Items[0].LockID.S' --output text 2>/dev/null || echo "")
+          if [ -n "$LOCK_ID" ] && [ "$LOCK_ID" != "None" ]; then
+            echo "Found stale lock: $LOCK_ID"
+            echo "Attempting to force unlock..."
+            terraform force-unlock -force "$LOCK_ID" || echo "Unlock failed or lock already released"
+          else
+            echo "No stale lock found"
+          fi
+        continue-on-error: true
+
       - name: Terraform Plan
         run: terraform plan -out=tfplan
         continue-on-error: true
@@ -140,7 +152,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci

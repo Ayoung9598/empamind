@@ -307,7 +307,7 @@ Your EmpaMind application is now fully deployed on AWS!
 - DynamoDB: 25GB storage ✅
 - Cognito: 50K MAU ✅
 - S3: 5GB storage, 20K GET requests ✅
-- CloudFront: 50GB transfer, 2M requests ✅
+- CloudFront: 50GB transfer, 2M requests 
 
 **Expected Monthly Cost: $0-5** for MVP
 

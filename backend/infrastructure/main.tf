@@ -12,12 +12,13 @@ terraform {
     }
   }
 
-  # Uncomment and configure if using remote state
-  # backend "s3" {
-  #   bucket = "terraform-state-bucket"
-  #   key    = "empamind/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  backend "s3" {
+    bucket         = "empamind-terraform-state-ayomide-2025"
+    key            = "empamind/terraform.tfstate"
+    region         = "us-east-1"
+    encrypt        = true
+    dynamodb_table = "empamind-terraform-state-lock"
+  }
 }
 
 provider "aws" {

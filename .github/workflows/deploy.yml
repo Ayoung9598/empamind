@@ -108,14 +108,7 @@ jobs:
       - name: Terraform Apply
         id: terraform-apply
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.plan.outcome == 'success'
-        run: |
-          # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
-          if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
-            terraform apply -var="frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -auto-approve tfplan
-          else
-            echo "Warning: S3_BUCKET_NAME secret not set. Frontend module will not be created."
-            terraform apply -auto-approve tfplan
-          fi
+        run: terraform apply -auto-approve tfplan
 
       - name: Get Terraform Outputs
         id: terraform-outputs

@@ -264,7 +264,6 @@ Your EmpaMind application is now fully deployed on AWS!
 - Configure CloudWatch monitoring
 - Set up billing alerts
 - Review security settings
-
 ---
 
 ## Troubleshooting

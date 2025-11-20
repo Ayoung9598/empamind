@@ -94,14 +94,28 @@ jobs:
         run: terraform validate || (echo "Validation failed. Check the errors above." && exit 1)
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: |
+          # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
+          if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
+            terraform plan -var="frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -out=tfplan
+          else
+            echo "Warning: S3_BUCKET_NAME secret not set. Frontend module will not be created."
+            terraform plan -out=tfplan
+          fi
         continue-on-error: true
         id: plan
 
       - name: Terraform Apply
         id: terraform-apply
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && steps.plan.outcome == 'success'
-        run: terraform apply -auto-approve tfplan
+        run: |
+          # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
+          if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
+            terraform apply -var="frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -auto-approve tfplan
+          else
+            echo "Warning: S3_BUCKET_NAME secret not set. Frontend module will not be created."
+            terraform apply -auto-approve tfplan
+          fi
 
       - name: Get Terraform Outputs
         id: terraform-outputs
@@ -166,15 +180,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Get API endpoint from Terraform
-        id: get-api-endpoint
+      - name: Get Terraform outputs for frontend
+        id: terraform-frontend-outputs
         working-directory: ./backend/infrastructure
         run: |
+          # Get API endpoint (fallback to secret if not available)
           API_ENDPOINT=$(terraform output -raw api_endpoint 2>/dev/null || echo "")
           if [ -z "$API_ENDPOINT" ]; then
             API_ENDPOINT="${{ secrets.VITE_API_ENDPOINT }}"
           fi
           echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+          
+          # Get S3 bucket name from Terraform output (source of truth after creation)
+          S3_BUCKET=$(terraform output -raw frontend_bucket_name 2>/dev/null || echo "")
+          if [ -z "$S3_BUCKET" ]; then
+            echo "Warning: frontend_bucket_name output not found. Using secret as fallback."
+            S3_BUCKET="${{ secrets.S3_BUCKET_NAME }}"
+          fi
+          echo "s3_bucket=$S3_BUCKET" >> $GITHUB_OUTPUT
+          
+          # Get CloudFront distribution ID from Terraform output (source of truth after creation)
+          CLOUDFRONT_ID=$(terraform output -raw frontend_cloudfront_distribution_id 2>/dev/null || echo "")
+          if [ -z "$CLOUDFRONT_ID" ]; then
+            echo "Warning: frontend_cloudfront_distribution_id output not found. Using secret as fallback."
+            CLOUDFRONT_ID="${{ secrets.CLOUDFRONT_DIST_ID }}"
+          fi
+          echo "cloudfront_id=$CLOUDFRONT_ID" >> $GITHUB_OUTPUT
         continue-on-error: true
 
       - name: Build frontend
@@ -182,7 +213,7 @@ jobs:
         env:
           VITE_COGNITO_USER_POOL_ID: ${{ secrets.VITE_COGNITO_USER_POOL_ID }}
           VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.VITE_COGNITO_USER_POOL_CLIENT_ID }}
-          VITE_API_ENDPOINT: ${{ steps.get-api-endpoint.outputs.api_endpoint }}
+          VITE_API_ENDPOINT: ${{ steps.terraform-frontend-outputs.outputs.api_endpoint }}
           VITE_AWS_REGION: ${{ env.AWS_REGION }}
 
       - name: Validate frontend secrets
@@ -191,8 +222,9 @@ jobs:
             echo "Error: VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_USER_POOL_CLIENT_ID secrets are required"
             exit 1
           fi
-          if [ -z "${{ secrets.S3_BUCKET_NAME }}" ]; then
-            echo "Error: S3_BUCKET_NAME secret is required for frontend deployment"
+          S3_BUCKET="${{ steps.terraform-frontend-outputs.outputs.s3_bucket }}"
+          if [ -z "$S3_BUCKET" ]; then
+            echo "Error: S3 bucket not found in Terraform outputs and S3_BUCKET_NAME secret not set"
             exit 1
           fi
 
@@ -205,9 +237,17 @@ jobs:
 
       - name: Deploy to S3
         run: |
-          aws s3 sync ./dist s3://${{ secrets.S3_BUCKET_NAME }} --delete
-          if [ -n "${{ secrets.CLOUDFRONT_DIST_ID }}" ]; then
-            aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DIST_ID }} --paths "/*"
+          S3_BUCKET="${{ steps.terraform-frontend-outputs.outputs.s3_bucket }}"
+          CLOUDFRONT_ID="${{ steps.terraform-frontend-outputs.outputs.cloudfront_id }}"
+          if [ -z "$S3_BUCKET" ]; then
+            echo "Error: S3 bucket name not available"
+            exit 1
+          fi
+          echo "Deploying to S3 bucket: $S3_BUCKET"
+          aws s3 sync ./dist s3://$S3_BUCKET --delete
+          if [ -n "$CLOUDFRONT_ID" ]; then
+            echo "Invalidating CloudFront cache: $CLOUDFRONT_ID"
+            aws cloudfront create-invalidation --distribution-id $CLOUDFRONT_ID --paths "/*"
           fi
 
       - name: Deployment summary

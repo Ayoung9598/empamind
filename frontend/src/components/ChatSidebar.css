@@ -8,6 +8,10 @@
   height: 100%;
   position: relative;
   min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s;
+  flex-shrink: 0;
 }
 
 .sidebar-header {
@@ -234,22 +238,32 @@
   background: transparent;
   border: none;
   color: var(--text-secondary);
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.chat-item:hover .chat-menu-button,
-.chat-item.active .chat-menu-button {
   opacity: 1;
   pointer-events: all;
+  flex-shrink: 0;
+  touch-action: manipulation;
+}
+
+/* Show on hover for desktop, always visible on mobile */
+@media (hover: hover) {
+  .chat-menu-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+  
+  .chat-item:hover .chat-menu-button,
+  .chat-item.active .chat-menu-button {
+    opacity: 1;
+    pointer-events: all;
+  }
 }
 
 .chat-menu-button:hover {
@@ -328,11 +342,37 @@
   color: var(--error);
 }
 
+/* Mobile specific improvements */
+@media (max-width: 767px) {
+  .chat-sidebar {
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  
+  .chat-item {
+    padding: 0.75rem;
+    min-height: 56px;
+  }
+  
+  .chat-menu {
+    min-width: 120px;
+    right: -8px;
+  }
+  
+  .menu-item {
+    padding: 0.875rem 1rem;
+    font-size: 0.875rem;
+  }
+}
+
 /* Tablet and up */
 @media (min-width: 768px) {
   .chat-sidebar {
     width: 320px;
     min-width: 280px;
+    max-width: 320px;
+    max-height: 100%;
   }
 
   .sidebar-header {

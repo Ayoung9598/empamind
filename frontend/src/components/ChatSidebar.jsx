@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useChat } from '../context/ChatContext'
 import './ChatSidebar.css'
 
-const ChatSidebar = () => {
+const ChatSidebar = ({ isVisible, onClose }) => {
   const { chatList, currentChatId, selectChat, startNewChat, loadChatList, updateChatTitle, removeChat } = useChat()
   const [openMenuId, setOpenMenuId] = useState(null)
   const [editingChatId, setEditingChatId] = useState(null)
@@ -88,7 +88,15 @@ const ChatSidebar = () => {
   const handleChatClick = (chatId) => {
     if (!editingChatId) {
       selectChat(chatId)
+      // Auto-hide sidebar on mobile after selecting a chat
+      if (window.innerWidth < 768 && onClose) {
+        onClose()
+      }
     }
+  }
+
+  if (!isVisible) {
+    return null
   }
 
   return (

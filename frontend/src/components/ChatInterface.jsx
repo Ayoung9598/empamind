@@ -10,6 +10,7 @@ const ChatInterface = () => {
   const { messages, currentChatId, loading, error, addMessage, startNewChat, loadChatList } = useChat()
   const { logout } = useAuth()
   const [inputText, setInputText] = useState('')
+  const [sidebarVisible, setSidebarVisible] = useState(true)
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -47,11 +48,35 @@ const ChatInterface = () => {
     }
   }
 
+  const toggleSidebar = () => {
+    setSidebarVisible(!sidebarVisible)
+  }
+
   return (
-    <div className="chat-container">
-      <ChatSidebar />
+    <div className={`chat-container ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
+      <ChatSidebar isVisible={sidebarVisible} onClose={() => setSidebarVisible(false)} />
       <div className="chat-main">
         <div className="chat-header">
+          <button 
+            onClick={toggleSidebar} 
+            className="sidebar-toggle-button" 
+            title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+            aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
+          >
+            {sidebarVisible ? (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            ) : (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            )}
+          </button>
           <div className="chat-header-content">
             <h2>Chat with EmpaMind</h2>
             <p className="chat-subtitle">Express yourself freely. I'm here to listen and support you.</p>

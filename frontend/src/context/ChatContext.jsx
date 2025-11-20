@@ -198,18 +198,15 @@ export const ChatProvider = ({ children }) => {
 
     try {
       await updateChat(chatId, newTitle)
-      setChatList((prev) =>
-        prev.map((chat) =>
-          chat.chatId === chatId ? { ...chat, title: newTitle.trim() } : chat
-        )
-      )
+      // Reload chat list to ensure consistency with backend
+      await loadChatList()
       return true
     } catch (err) {
       setError(err.message || 'Failed to update chat title')
       console.error('Failed to update chat:', err)
       return false
     }
-  }, [])
+  }, [loadChatList])
 
   const removeChat = useCallback(async (chatId) => {
     if (!chatId) return false
@@ -226,18 +223,20 @@ export const ChatProvider = ({ children }) => {
 
     try {
       await deleteChat(chatId)
-      setChatList((prev) => prev.filter((chat) => chat.chatId !== chatId))
+      // Clear current chat if it was deleted
       if (currentChatId === chatId) {
         setCurrentChatId(null)
         setMessages([])
       }
+      // Reload chat list to ensure consistency with backend
+      await loadChatList()
       return true
     } catch (err) {
       setError(err.message || 'Failed to delete chat')
       console.error('Failed to delete chat:', err)
       return false
     }
-  }, [currentChatId])
+  }, [currentChatId, loadChatList])
 
   const value = {
     messages,

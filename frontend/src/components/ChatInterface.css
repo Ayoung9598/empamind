@@ -269,10 +269,13 @@
   min-height: 44px;
   max-height: 120px;
   font-family: inherit;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   background: var(--background-light);
   color: var(--text-primary);
   line-height: 1.5;
+  overflow-y: auto;
+  overflow-x: hidden;
+  word-wrap: break-word;
 }
 
 .chat-input:focus {
@@ -449,9 +452,10 @@
     opacity: 0;
     pointer-events: none;
   }
-  
+
   .chat-container.sidebar-hidden .chat-main {
     width: 100%;
+    flex: 1;
   }
   
   .chat-header {
@@ -507,6 +511,11 @@
     max-height: 140px;
     font-size: 1rem;
     border-radius: 26px;
+  }
+  
+  .chat-input-container {
+    /* Ensure input container doesn't push content up too much */
+    flex-shrink: 0;
   }
 
   .voice-button,

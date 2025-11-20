@@ -370,10 +370,23 @@
     max-width: 320px;
     transform: none;
     box-shadow: none;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
   }
   
   .chat-sidebar.visible {
     transform: none;
+  }
+
+  /* Hide sidebar on desktop when container has sidebar-hidden class */
+  .chat-container.sidebar-hidden .chat-sidebar {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    opacity: 0;
+    overflow: hidden;
+    border-right: none;
+    padding: 0;
+    margin: 0;
   }
   
   .sidebar-overlay {

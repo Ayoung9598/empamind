@@ -1,3 +1,4 @@
+import ReactMarkdown from 'react-markdown'
 import './MessageBubble.css'
 
 const MessageBubble = ({ message }) => {
@@ -13,7 +14,11 @@ const MessageBubble = ({ message }) => {
     <div className={`message-bubble ${isUser ? 'user-message' : 'ai-message'}`}>
       <div className="message-content">
         <div className="message-text">
-          {message.text}
+          {isUser ? (
+            message.text
+          ) : (
+            <ReactMarkdown>{message.text}</ReactMarkdown>
+          )}
           {isStreaming && <span className="streaming-cursor">▊</span>}
         </div>
         {message.sentiment && !isUser && !isStreaming && (

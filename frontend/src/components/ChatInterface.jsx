@@ -17,6 +17,38 @@ const ChatInterface = () => {
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   
+  // Auto-expand textarea based on content
+  useEffect(() => {
+    const textarea = inputRef.current
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto'
+      // Set height to scrollHeight, but respect max-height
+      const scrollHeight = textarea.scrollHeight
+      const maxHeight = window.innerWidth < 768 ? 120 : 140
+      const newHeight = Math.min(scrollHeight, maxHeight)
+      textarea.style.height = `${newHeight}px`
+      
+      // If textarea is at max height, scroll to bottom to show cursor
+      if (scrollHeight > maxHeight) {
+        textarea.scrollTop = textarea.scrollHeight
+      }
+      
+      // Scroll chat messages container to show input area when typing
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
+        const chatMessages = document.querySelector('.chat-messages')
+        if (chatMessages) {
+          // Only auto-scroll if user is near the bottom (within 100px)
+          const isNearBottom = chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight < 100
+          if (isNearBottom || inputText.length === 0) {
+            chatMessages.scrollTop = chatMessages.scrollHeight
+          }
+        }
+      })
+    }
+  }, [inputText])
+  
   // Update sidebar visibility on window resize
   useEffect(() => {
     const handleResize = () => {
@@ -24,6 +56,14 @@ const ChatInterface = () => {
         setSidebarVisible(true)
       } else {
         setSidebarVisible(false)
+      }
+      // Recalculate textarea height on resize
+      const textarea = inputRef.current
+      if (textarea) {
+        textarea.style.height = 'auto'
+        const scrollHeight = textarea.scrollHeight
+        const maxHeight = window.innerWidth < 768 ? 120 : 140
+        textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`
       }
     }
     window.addEventListener('resize', handleResize)
@@ -64,6 +104,10 @@ const ChatInterface = () => {
 
     const text = inputText
     setInputText('')
+    // Reset textarea height after submit
+    if (inputRef.current) {
+      inputRef.current.style.height = 'auto'
+    }
     await addMessage(text)
     inputRef.current?.focus()
   }
@@ -94,7 +138,7 @@ const ChatInterface = () => {
         />
       )}
       <ChatSidebar 
-        isVisible={sidebarVisible} 
+        isVisible={sidebarVisible}
         onClose={() => setSidebarVisible(false)}
         onChatSelect={() => {
           // Auto-hide on mobile after selecting

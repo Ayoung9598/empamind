@@ -177,6 +177,22 @@ jobs:
         id: terraform-frontend-outputs
         working-directory: ./backend/infrastructure
         run: |
+          # Get Cognito User Pool ID from Terraform output (source of truth)
+          USER_POOL_ID=$(terraform output -raw user_pool_id 2>/dev/null || echo "")
+          if [ -z "$USER_POOL_ID" ]; then
+            echo "Warning: user_pool_id output not found. Using secret as fallback."
+            USER_POOL_ID="${{ secrets.VITE_COGNITO_USER_POOL_ID }}"
+          fi
+          echo "user_pool_id=$USER_POOL_ID" >> $GITHUB_OUTPUT
+          
+          # Get Cognito User Pool Client ID from Terraform output (source of truth)
+          USER_POOL_CLIENT_ID=$(terraform output -raw user_pool_client_id 2>/dev/null || echo "")
+          if [ -z "$USER_POOL_CLIENT_ID" ]; then
+            echo "Warning: user_pool_client_id output not found. Using secret as fallback."
+            USER_POOL_CLIENT_ID="${{ secrets.VITE_COGNITO_USER_POOL_CLIENT_ID }}"
+          fi
+          echo "user_pool_client_id=$USER_POOL_CLIENT_ID" >> $GITHUB_OUTPUT
+          
           # Get API endpoint (fallback to secret if not available)
           API_ENDPOINT=$(terraform output -raw api_endpoint 2>/dev/null || echo "")
           if [ -z "$API_ENDPOINT" ]; then
@@ -204,15 +220,17 @@ jobs:
       - name: Build frontend
         run: npm run build
         env:
-          VITE_COGNITO_USER_POOL_ID: ${{ secrets.VITE_COGNITO_USER_POOL_ID }}
-          VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ secrets.VITE_COGNITO_USER_POOL_CLIENT_ID }}
+          VITE_COGNITO_USER_POOL_ID: ${{ steps.terraform-frontend-outputs.outputs.user_pool_id }}
+          VITE_COGNITO_USER_POOL_CLIENT_ID: ${{ steps.terraform-frontend-outputs.outputs.user_pool_client_id }}
           VITE_API_ENDPOINT: ${{ steps.terraform-frontend-outputs.outputs.api_endpoint }}
           VITE_AWS_REGION: ${{ env.AWS_REGION }}
 
-      - name: Validate frontend secrets
+      - name: Validate frontend configuration
         run: |
-          if [ -z "${{ secrets.VITE_COGNITO_USER_POOL_ID }}" ] || [ -z "${{ secrets.VITE_COGNITO_USER_POOL_CLIENT_ID }}" ]; then
-            echo "Error: VITE_COGNITO_USER_POOL_ID and VITE_COGNITO_USER_POOL_CLIENT_ID secrets are required"
+          USER_POOL_ID="${{ steps.terraform-frontend-outputs.outputs.user_pool_id }}"
+          USER_POOL_CLIENT_ID="${{ steps.terraform-frontend-outputs.outputs.user_pool_client_id }}"
+          if [ -z "$USER_POOL_ID" ] || [ -z "$USER_POOL_CLIENT_ID" ]; then
+            echo "Error: Cognito User Pool ID and Client ID are required (from Terraform outputs or secrets)"
             exit 1
           fi
           S3_BUCKET="${{ steps.terraform-frontend-outputs.outputs.s3_bucket }}"

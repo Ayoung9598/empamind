@@ -65,9 +65,3 @@ variable "frontend_bucket_name" {
   }
 }
 
-variable "transcribe_bucket_name" {
-  description = "Name of the S3 bucket for Transcribe temporary audio storage (optional, but required for voice features)."
-  type        = string
-  default     = ""
-}
-

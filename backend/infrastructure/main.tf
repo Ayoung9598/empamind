@@ -40,6 +40,11 @@ data "aws_region" "current" {}
 # Data source for current AWS account
 data "aws_caller_identity" "current" {}
 
+# Local values for auto-generated resource names
+locals {
+  transcribe_bucket_name = "empamind-transcribe-${var.environment}-${substr(data.aws_caller_identity.current.account_id, 0, 8)}"
+}
+
 # Module for Terraform State Storage (S3 + DynamoDB)
 # Note: This should be created first, before enabling remote state backend
 module "state" {
@@ -75,7 +80,7 @@ module "lambda" {
   aws_region             = var.aws_region
   chat_table_name        = module.dynamodb.table_name
   bedrock_model_id       = var.bedrock_model_id
-  transcribe_bucket_name = var.transcribe_bucket_name != "" ? module.transcribe[0].bucket_name : ""
+  transcribe_bucket_name = module.transcribe.bucket_name
   environment            = var.environment
 
   depends_on = [
@@ -113,11 +118,9 @@ module "api_gateway" {
 
 # Module for Transcribe S3 Bucket
 module "transcribe" {
-  count = var.transcribe_bucket_name != "" ? 1 : 0
-
   source = "./modules/transcribe"
 
-  bucket_name = var.transcribe_bucket_name
+  bucket_name = local.transcribe_bucket_name
   environment = var.environment
 }
 

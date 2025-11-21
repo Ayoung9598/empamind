@@ -444,7 +444,14 @@ export const ChatProvider = ({ children }) => {
     }
 
     try {
+      console.log('Sending voice message, format:', audioFormat, 'responseFormat:', responseFormat)
       const response = await sendVoiceMessage(audioBlob, audioFormat, responseFormat, currentChatId, title)
+      console.log('Voice message response received:', {
+        hasAudio: !!response.audio,
+        hasAudioBlob: !!response.audioBlob,
+        audioBlobSize: response.audioBlob?.size,
+        responseFormat: response.responseFormat
+      })
       
       // Update current chat ID if this is a new chat
       if (response.chatId && !currentChatId) {
@@ -452,12 +459,20 @@ export const ChatProvider = ({ children }) => {
         await loadChatList()
       }
       
-      // Update user message with transcript
-      setMessages((prev) => prev.map((msg) => 
-        msg.id === userMessage.id 
-          ? { ...msg, text: response.transcript || '🎤 Voice message' }
-          : msg
-      ))
+      // Update user message with transcript (preserve audioBlob and isVoice)
+      setMessages((prev) => prev.map((msg) => {
+        if (msg.id === userMessage.id) {
+          const updated = { 
+            ...msg, 
+            text: response.transcript || '🎤 Voice message', 
+            isVoice: true, 
+            audioBlob: msg.audioBlob // Preserve original audio blob
+          }
+          console.log('Updated user message with transcript, audioBlob preserved:', !!updated.audioBlob)
+          return updated
+        }
+        return msg
+      }))
       
       // Create AI message
       const aiMessageId = `ai-${Date.now()}`
@@ -478,9 +493,13 @@ export const ChatProvider = ({ children }) => {
         sentiment: sentiment,
         responseFormat: responseFormat,
         isStreaming: false,
-        ...(responseFormat === 'voice' && response.audioBlob && { audioBlob: response.audioBlob })
+        ...(responseFormat === 'voice' && response.audioBlob && { 
+          audioBlob: response.audioBlob,
+          isVoice: true 
+        })
       }
       
+      console.log('AI message created with audioBlob:', !!aiMessage.audioBlob, 'size:', aiMessage.audioBlob?.size)
       setMessages((prev) => [...prev, aiMessage])
       
     } catch (err) {

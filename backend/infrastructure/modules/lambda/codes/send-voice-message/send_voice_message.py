@@ -114,6 +114,9 @@ def transcribe_audio(audio_bytes, audio_format='webm'):
     if not S3_BUCKET:
         raise Exception('S3 bucket not configured for Transcribe. Please set TRANSCRIBE_BUCKET_NAME environment variable.')
     
+    s3_key = None  # Initialize for error handling
+    job_name = None  # Initialize for error handling
+    
     try:
         # Map audio format to MediaFormat
         format_map = {
@@ -131,11 +134,13 @@ def transcribe_audio(audio_bytes, audio_format='webm'):
         job_name = f"transcribe-{uuid.uuid4().hex}"
         s3_key = f"transcribe/{job_name}.{media_format}"
         
+        print(f'Uploading audio to S3: bucket={S3_BUCKET}, key={s3_key}, size={len(audio_bytes)} bytes')
         s3.put_object(
             Bucket=S3_BUCKET,
             Key=s3_key,
             Body=audio_bytes
         )
+        print(f'Successfully uploaded audio to S3: s3://{S3_BUCKET}/{s3_key}')
         
         s3_uri = f"s3://{S3_BUCKET}/{s3_key}"
         
@@ -159,42 +164,57 @@ def transcribe_audio(audio_bytes, audio_format='webm'):
                 transcript_uri = response['TranscriptionJob']['Transcript']['TranscriptFileUri']
                 transcript_data = json.loads(urllib.request.urlopen(transcript_uri).read())
                 transcript = transcript_data['results']['transcripts'][0]['transcript']
+                print(f'Transcription completed successfully. Transcript: {transcript[:100]}...')
                 
-                # Clean up S3 file
+                # Clean up S3 file immediately after transcription (no need to keep it)
+                # Lifecycle policy (1 day) is just a safety net, but we delete immediately
                 try:
                     s3.delete_object(Bucket=S3_BUCKET, Key=s3_key)
+                    print(f'Deleted S3 object: {s3_key}')
                 except Exception as e:
                     print(f'Warning: Failed to delete S3 object {s3_key}: {e}')
                 
                 # Clean up transcription job
                 try:
                     transcribe.delete_transcription_job(TranscriptionJobName=job_name)
+                    print(f'Deleted transcription job: {job_name}')
                 except Exception as e:
                     print(f'Warning: Failed to delete transcription job {job_name}: {e}')
                 
                 return transcript
             elif status == 'FAILED':
                 failure_reason = response['TranscriptionJob'].get('FailureReason', 'Unknown error')
-                # Clean up S3 file on failure
+                print(f'Transcription job failed: {failure_reason}')
+                # Clean up S3 file on failure (lifecycle policy will delete after 1 day as backup)
                 try:
                     s3.delete_object(Bucket=S3_BUCKET, Key=s3_key)
-                except:
-                    pass
+                    print(f'Deleted S3 object after failure: {s3_key}')
+                except Exception as e:
+                    print(f'Warning: Failed to delete S3 object {s3_key} after failure: {e}')
                 raise Exception(f'Transcription failed: {failure_reason}')
             
             time.sleep(2)
             wait_time += 2
         
-        # Clean up S3 file on timeout
+        # Clean up S3 file on timeout (lifecycle policy will delete after 1 day as backup)
+        print(f'Transcription job timed out after {max_wait} seconds')
         try:
             s3.delete_object(Bucket=S3_BUCKET, Key=s3_key)
-        except:
-            pass
+            print(f'Deleted S3 object after timeout: {s3_key}')
+        except Exception as e:
+            print(f'Warning: Failed to delete S3 object {s3_key} after timeout: {e}')
         raise Exception('Transcription job timed out after 60 seconds')
             
     except ClientError as e:
-        print(f'Error transcribing audio: {e}')
-        raise Exception(f'Failed to transcribe audio: {str(e)}')
+        error_code = e.response.get('Error', {}).get('Code', 'Unknown')
+        error_message = e.response.get('Error', {}).get('Message', str(e))
+        print(f'Error transcribing audio - Code: {error_code}, Message: {error_message}')
+        print(f'S3 bucket: {S3_BUCKET}, S3 key: {s3_key if s3_key else "N/A"}')
+        raise Exception(f'Failed to transcribe audio: {error_message}')
+    except Exception as e:
+        print(f'Unexpected error in transcribe_audio: {e}')
+        print(f'S3 bucket: {S3_BUCKET}, S3 key: {s3_key if s3_key else "N/A"}')
+        raise
 
 def synthesize_speech(text):
     """Convert text to speech using AWS Polly"""

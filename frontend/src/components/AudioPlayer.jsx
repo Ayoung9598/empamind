@@ -22,19 +22,29 @@ const AudioPlayer = ({ audioBlob, audioUrl }) => {
       setCurrentTime(0)
     }
     const handleCanPlay = () => setIsLoading(false)
+    const handleError = (e) => {
+      console.error('Audio playback error:', e)
+      setIsLoading(false)
+      setIsPlaying(false)
+    }
+    const handleLoadStart = () => setIsLoading(true)
 
     audio.addEventListener('timeupdate', updateTime)
     audio.addEventListener('loadedmetadata', updateDuration)
     audio.addEventListener('ended', handleEnded)
     audio.addEventListener('canplay', handleCanPlay)
+    audio.addEventListener('error', handleError)
+    audio.addEventListener('loadstart', handleLoadStart)
 
     return () => {
       audio.removeEventListener('timeupdate', updateTime)
       audio.removeEventListener('loadedmetadata', updateDuration)
       audio.removeEventListener('ended', handleEnded)
       audio.removeEventListener('canplay', handleCanPlay)
+      audio.removeEventListener('error', handleError)
+      audio.removeEventListener('loadstart', handleLoadStart)
     }
-  }, [])
+  }, [audioSrc])
 
   useEffect(() => {
     const audio = audioRef.current
@@ -78,20 +88,33 @@ const AudioPlayer = ({ audioBlob, audioUrl }) => {
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
   // Create object URL from blob if provided
-  const audioSrc = audioBlob ? URL.createObjectURL(audioBlob) : audioUrl
+  const [audioSrc, setAudioSrc] = useState(null)
 
   useEffect(() => {
-    // Cleanup object URL on unmount
-    return () => {
-      if (audioBlob && audioSrc) {
-        URL.revokeObjectURL(audioSrc)
+    if (audioBlob) {
+      const url = URL.createObjectURL(audioBlob)
+      setAudioSrc(url)
+      return () => {
+        URL.revokeObjectURL(url)
       }
+    } else if (audioUrl) {
+      setAudioSrc(audioUrl)
+    } else {
+      setAudioSrc(null)
     }
-  }, [audioBlob, audioSrc])
+  }, [audioBlob, audioUrl])
+
+  if (!audioSrc) {
+    return (
+      <div className="audio-player">
+        <div className="audio-error">Audio not available</div>
+      </div>
+    )
+  }
 
   return (
     <div className="audio-player">
-      <audio ref={audioRef} src={audioSrc} preload="metadata" />
+      <audio ref={audioRef} src={audioSrc} preload="metadata" crossOrigin="anonymous" />
       
       <button
         onClick={togglePlayPause}

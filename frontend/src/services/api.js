@@ -112,12 +112,28 @@ export const sendVoiceMessage = async (audioBlob, audioFormat = 'webm', response
         
         // If response has audio, convert base64 to blob
         if (response.audio) {
-          const audioBytes = atob(response.audio)
-          const audioArray = new Uint8Array(audioBytes.length)
-          for (let i = 0; i < audioBytes.length; i++) {
-            audioArray[i] = audioBytes.charCodeAt(i)
+          try {
+            // Handle base64 string (may or may not have data URL prefix)
+            let base64Data = response.audio
+            if (base64Data.includes(',')) {
+              base64Data = base64Data.split(',')[1]
+            }
+            
+            // Decode base64 to binary
+            const binaryString = atob(base64Data)
+            const audioArray = new Uint8Array(binaryString.length)
+            for (let i = 0; i < binaryString.length; i++) {
+              audioArray[i] = binaryString.charCodeAt(i)
+            }
+            
+            // Create blob with proper MIME type
+            response.audioBlob = new Blob([audioArray], { type: 'audio/mpeg' })
+            console.log('Audio blob created successfully, size:', response.audioBlob.size, 'bytes')
+          } catch (error) {
+            console.error('Error converting audio base64 to blob:', error)
+            // Don't fail the whole request if audio conversion fails
+            response.audioBlob = null
           }
-          response.audioBlob = new Blob([audioArray], { type: 'audio/mp3' })
         }
         
         resolve(response)

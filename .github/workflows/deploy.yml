@@ -96,6 +96,8 @@ jobs:
       - name: Terraform Plan
         run: |
           PLAN_ARGS=""
+          # Always set state_bucket_name since it's already created and in state
+          PLAN_ARGS="$PLAN_ARGS -var=state_bucket_name=empamind-terraform-state-ayomide-2025"
           # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
           if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
             PLAN_ARGS="$PLAN_ARGS -var=frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}"

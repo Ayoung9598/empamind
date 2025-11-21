@@ -48,3 +48,11 @@ data "archive_file" "delete_chat_zip" {
   excludes    = ["__pycache__", "*.pyc", ".pytest_cache", "*.zip", "*.md"]
 }
 
+# Send voice message handler
+data "archive_file" "send_voice_message_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/codes/send-voice-message"
+  output_path = "${path.module}/codes/send-voice-message.zip"
+  excludes    = ["__pycache__", "*.pyc", ".pytest_cache", "*.zip", "*.md"]
+}
+

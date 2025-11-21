@@ -140,6 +140,99 @@ paths:
               method.response.header.Access-Control-Allow-Methods: "'GET,POST,OPTIONS'"
               method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
 
+  /chat/voice:
+    post:
+      summary: Send a voice chat message
+      operationId: postVoiceChat
+      security:
+        - CognitoAuthorizer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audio
+              properties:
+                audio:
+                  type: string
+                  description: Base64-encoded audio file
+                audioFormat:
+                  type: string
+                  description: Audio format (webm, mp3, wav, etc.)
+                  default: webm
+                responseFormat:
+                  type: string
+                  description: Response format - 'voice' or 'text'
+                  enum: [voice, text]
+                  default: voice
+                chatId:
+                  type: string
+                  description: Optional. If not provided, creates a new chat
+                title:
+                  type: string
+                  description: Optional. Title for new chat (defaults to first message)
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transcript:
+                    type: string
+                    description: Transcribed user message
+                  response:
+                    type: string
+                    description: AI text response
+                  audio:
+                    type: string
+                    description: Base64-encoded audio response (only if responseFormat is 'voice')
+                  sentiment:
+                    type: string
+                  chatId:
+                    type: string
+                  responseFormat:
+                    type: string
+        '400':
+          description: Bad request
+        '500':
+          description: Internal server error
+      x-amazon-apigateway-integration:
+        type: aws_proxy
+        httpMethod: POST
+        uri: ${send_voice_message_invoke_arn}
+        passthroughBehavior: when_no_match
+        contentHandling: CONVERT_TO_TEXT
+    options:
+      summary: CORS preflight
+      operationId: optionsVoiceChat
+      responses:
+        '200':
+          description: CORS response
+          headers:
+            Access-Control-Allow-Origin:
+              schema:
+                type: string
+            Access-Control-Allow-Methods:
+              schema:
+                type: string
+            Access-Control-Allow-Headers:
+              schema:
+                type: string
+      x-amazon-apigateway-integration:
+        type: mock
+        requestTemplates:
+          application/json: '{"statusCode": 200}'
+        responses:
+          default:
+            statusCode: 200
+            responseParameters:
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+              method.response.header.Access-Control-Allow-Methods: "'POST,OPTIONS'"
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,Authorization'"
+
   /chat/{chatId}:
     get:
       summary: Get messages for a specific chat

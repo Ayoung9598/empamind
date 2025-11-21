@@ -181,3 +181,39 @@ resource "aws_lambda_function" "delete_chat" {
   ]
 }
 
+# Send Voice Message Lambda function
+resource "aws_lambda_function" "send_voice_message" {
+  filename         = data.archive_file.send_voice_message_zip.output_path
+  function_name    = "empamind-send-voice-message-${var.environment}"
+  role            = aws_iam_role.lambda_execution.arn
+  handler         = "send_voice_message.handler"
+  runtime         = "python3.11"
+  timeout         = 60
+  memory_size     = 512
+
+  source_code_hash = data.archive_file.send_voice_message_zip.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_utils.arn]
+
+  environment {
+    variables = {
+      CHAT_TABLE_NAME        = var.chat_table_name
+      BEDROCK_MODEL_ID      = var.bedrock_model_id
+      TRANSCRIBE_BUCKET_NAME = var.transcribe_bucket_name
+    }
+  }
+
+  tags = {
+    Name        = "empamind-send-voice-message"
+    Environment = var.environment
+    createdby   = "ayomide.abiola@cecureintel.com"
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.lambda_custom,
+    aws_lambda_layer_version.shared_utils,
+    data.archive_file.send_voice_message_zip
+  ]
+}
+

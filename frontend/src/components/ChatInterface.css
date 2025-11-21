@@ -291,14 +291,82 @@
   opacity: 0.6;
 }
 
-.voice-button-wrapper {
-  position: relative;
+.voice-mode-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border-radius: 12px;
+  border: 1px solid var(--border);
 }
 
-.voice-button {
+.voice-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mode-toggle-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle-button:hover {
+  background: var(--background);
+  border-color: var(--primary-color);
+}
+
+.response-format-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.format-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.format-button {
+  padding: 6px 12px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.format-button:hover:not(:disabled) {
+  background: var(--background);
+  border-color: var(--primary-color);
+}
+
+.format-button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.format-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voice-mode-toggle-button {
   background: transparent;
   color: var(--text-secondary);
   width: 44px;
@@ -310,18 +378,18 @@
   flex-shrink: 0;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: none;
-  cursor: not-allowed;
-  opacity: 0.4;
+  cursor: pointer;
   touch-action: manipulation;
 }
 
-.voice-button:hover {
-  opacity: 0.6;
+.voice-mode-toggle-button:hover:not(:disabled) {
   background: var(--surface-elevated);
+  color: var(--primary-color);
 }
 
-.voice-tooltip {
-  display: none;
+.voice-mode-toggle-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .send-button {

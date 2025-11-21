@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react'
 import { useAuth } from './AuthContext'
-import { sendMessage, getChatHistory, listChats, updateChat, deleteChat } from '../services/api'
+import { sendMessage, sendVoiceMessage, getChatHistory, listChats, updateChat, deleteChat } from '../services/api'
 
 const ChatContext = createContext()
 
@@ -349,6 +349,149 @@ export const ChatProvider = ({ children }) => {
     }
   }, [loadChatList])
 
+  const addVoiceMessage = useCallback(async (audioBlob, audioFormat, responseFormat, title = null) => {
+    if (!audioBlob) return
+
+    // Create user voice message placeholder
+    const userMessage = {
+      id: Date.now().toString(),
+      text: '🎤 Voice message',
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+      isVoice: true,
+      audioBlob: audioBlob
+    }
+
+    setMessages((prev) => [...prev, userMessage])
+    setLoading(true)
+    setError(null)
+
+    // Skip API call if endpoint is not configured (for local UI testing)
+    if (!import.meta.env.VITE_API_ENDPOINT) {
+      setTimeout(async () => {
+        const fullText = 'I understand how you\'re feeling. This is a demo response since the backend is not configured.'
+        const aiMessageId = `ai-demo-${Date.now()}`
+        
+        setLoading(false)
+        
+        const streamingMessage = {
+          id: aiMessageId,
+          text: '',
+          sender: 'ai',
+          timestamp: new Date().toISOString(),
+          sentiment: 'NEUTRAL',
+          isStreaming: true,
+          responseFormat: responseFormat,
+          ...(responseFormat === 'voice' && { audioBlob: new Blob(['demo'], { type: 'audio/mp3' }) })
+        }
+        
+        setMessages((prev) => {
+          const exists = prev.find(msg => msg.id === aiMessageId)
+          if (exists) return prev
+          return [...prev, streamingMessage]
+        })
+        
+        if (streamingIntervalRef.current) {
+          clearInterval(streamingIntervalRef.current)
+        }
+        
+        const startStreaming = () => {
+          let currentIndex = 0
+          const streamSpeed = 20
+          
+          streamingIntervalRef.current = setInterval(() => {
+            if (currentIndex < fullText.length) {
+              const chunk = fullText.slice(0, currentIndex + 1)
+              const stillStreaming = currentIndex < fullText.length - 1
+              
+              setMessages((prev) => {
+                return prev.map((msg) => {
+                  if (msg.id === aiMessageId) {
+                    return { 
+                      ...msg, 
+                      text: chunk, 
+                      isStreaming: stillStreaming 
+                    }
+                  }
+                  return msg
+                })
+              })
+              
+              currentIndex++
+            } else {
+              if (streamingIntervalRef.current) {
+                clearInterval(streamingIntervalRef.current)
+                streamingIntervalRef.current = null
+              }
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === aiMessageId ? { ...msg, isStreaming: false } : msg
+                )
+              )
+            }
+          }, streamSpeed)
+        }
+        
+        setTimeout(startStreaming, 100)
+        
+        if (!currentChatId) {
+          const newChatId = `demo-${Date.now()}`
+          setCurrentChatId(newChatId)
+          await loadChatList()
+        }
+      }, 500)
+      return
+    }
+
+    try {
+      const response = await sendVoiceMessage(audioBlob, audioFormat, responseFormat, currentChatId, title)
+      
+      // Update current chat ID if this is a new chat
+      if (response.chatId && !currentChatId) {
+        setCurrentChatId(response.chatId)
+        await loadChatList()
+      }
+      
+      // Update user message with transcript
+      setMessages((prev) => prev.map((msg) => 
+        msg.id === userMessage.id 
+          ? { ...msg, text: response.transcript || '🎤 Voice message' }
+          : msg
+      ))
+      
+      // Create AI message
+      const aiMessageId = `ai-${Date.now()}`
+      const fullText = (response.response || '').trim()
+      const sentiment = response.sentiment
+      
+      if (!fullText) {
+        throw new Error('No response message received')
+      }
+      
+      setLoading(false)
+      
+      const aiMessage = {
+        id: aiMessageId,
+        text: fullText,
+        sender: 'ai',
+        timestamp: new Date().toISOString(),
+        sentiment: sentiment,
+        responseFormat: responseFormat,
+        isStreaming: false,
+        ...(responseFormat === 'voice' && response.audioBlob && { audioBlob: response.audioBlob })
+      }
+      
+      setMessages((prev) => [...prev, aiMessage])
+      
+    } catch (err) {
+      setError(err.message || 'Failed to send voice message. Please try again.')
+      console.error('Voice message error:', err)
+      setLoading(false)
+      // Remove user message on error
+      setMessages((prev) => prev.filter(msg => msg.id !== userMessage.id))
+    }
+  }, [currentChatId, loadChatList])
+
   const removeChat = useCallback(async (chatId) => {
     if (!chatId) return false
 
@@ -386,6 +529,7 @@ export const ChatProvider = ({ children }) => {
     loading,
     error,
     addMessage,
+    addVoiceMessage,
     startNewChat,
     selectChat,
     clearChat,

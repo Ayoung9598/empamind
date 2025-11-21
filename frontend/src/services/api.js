@@ -91,3 +91,42 @@ export const deleteChat = async (chatId) => {
   return apiClient.delete(`/chat/${chatId}`)
 }
 
+export const sendVoiceMessage = async (audioBlob, audioFormat = 'webm', responseFormat = 'voice', chatId = null, title = null) => {
+  // Convert audio blob to base64
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      try {
+        // Remove data URL prefix (e.g., "data:audio/webm;base64,")
+        const base64Audio = reader.result.split(',')[1] || reader.result
+        
+        const payload = {
+          audio: base64Audio,
+          audioFormat: audioFormat,
+          responseFormat: responseFormat
+        }
+        if (chatId) payload.chatId = chatId
+        if (title) payload.title = title
+        
+        const response = await apiClient.post('/chat/voice', payload)
+        
+        // If response has audio, convert base64 to blob
+        if (response.audio) {
+          const audioBytes = atob(response.audio)
+          const audioArray = new Uint8Array(audioBytes.length)
+          for (let i = 0; i < audioBytes.length; i++) {
+            audioArray[i] = audioBytes.charCodeAt(i)
+          }
+          response.audioBlob = new Blob([audioArray], { type: 'audio/mp3' })
+        }
+        
+        resolve(response)
+      } catch (error) {
+        reject(error)
+      }
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(audioBlob)
+  })
+}
+

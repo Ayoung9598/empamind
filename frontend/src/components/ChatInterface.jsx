@@ -4,12 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import MessageBubble from './MessageBubble'
 import LoadingIndicator from './LoadingIndicator'
 import ChatSidebar from './ChatSidebar'
+import VoiceRecorder from './VoiceRecorder'
 import './ChatInterface.css'
 
 const ChatInterface = () => {
-  const { messages, currentChatId, loading, error, addMessage, startNewChat, loadChatList } = useChat()
+  const { messages, currentChatId, loading, error, addMessage, addVoiceMessage, startNewChat, loadChatList } = useChat()
   const { logout } = useAuth()
   const [inputText, setInputText] = useState('')
+  const [voiceMode, setVoiceMode] = useState(false)
+  const [responseFormat, setResponseFormat] = useState('voice')
   // Sidebar hidden by default on mobile, visible on desktop
   const [sidebarVisible, setSidebarVisible] = useState(() => {
     return window.innerWidth >= 768
@@ -128,6 +131,20 @@ const ChatInterface = () => {
     setSidebarVisible(!sidebarVisible)
   }
 
+  const handleVoiceRecordingComplete = async (audioBlob, audioFormat) => {
+    await addVoiceMessage(audioBlob, audioFormat, responseFormat)
+  }
+
+  const toggleVoiceMode = () => {
+    setVoiceMode(!voiceMode)
+    if (!voiceMode) {
+      // When switching to voice mode, focus is not needed
+    } else {
+      // When switching back to text mode, focus input
+      setTimeout(() => inputRef.current?.focus(), 100)
+    }
+  }
+
   return (
     <div className={`chat-container ${!sidebarVisible ? 'sidebar-hidden' : ''}`}>
       {sidebarVisible && (
@@ -206,24 +223,74 @@ const ChatInterface = () => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="chat-input-container">
-        <div className="chat-input-wrapper">
-          <textarea
-            ref={inputRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
-            className="chat-input"
-            rows={1}
-            disabled={loading}
-          />
-          <div className="voice-button-wrapper">
+      <div className="chat-input-container">
+        {voiceMode ? (
+          <div className="voice-mode-container">
+            <div className="voice-mode-header">
+              <button
+                type="button"
+                onClick={toggleVoiceMode}
+                className="mode-toggle-button"
+                title="Switch to text mode"
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                  <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                Text Mode
+              </button>
+              <div className="response-format-selector">
+                <label className="format-label">Response:</label>
+                <button
+                  type="button"
+                  className={`format-button ${responseFormat === 'voice' ? 'active' : ''}`}
+                  onClick={() => setResponseFormat('voice')}
+                  disabled={loading}
+                >
+                  🎤 Voice
+                </button>
+                <button
+                  type="button"
+                  className={`format-button ${responseFormat === 'text' ? 'active' : ''}`}
+                  onClick={() => setResponseFormat('text')}
+                  disabled={loading}
+                >
+                  💬 Text
+                </button>
+              </div>
+            </div>
+            <VoiceRecorder
+              onRecordingComplete={handleVoiceRecordingComplete}
+              disabled={loading}
+            />
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="chat-input-wrapper">
+            <textarea
+              ref={inputRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+              className="chat-input"
+              rows={1}
+              disabled={loading}
+            />
             <button
               type="button"
-              className="voice-button"
-              disabled
-              title="Voice chat is coming soon"
+              onClick={toggleVoiceMode}
+              className="voice-mode-toggle-button"
+              title="Switch to voice mode"
+              disabled={loading}
             >
               <svg
                 width="20"
@@ -241,30 +308,29 @@ const ChatInterface = () => {
                 <line x1="8" y1="23" x2="16" y2="23"></line>
               </svg>
             </button>
-            <span className="voice-tooltip">Voice chat is coming soon</span>
-          </div>
-          <button
-            type="submit"
-            className="send-button"
-            disabled={!inputText.trim() || loading}
-            title="Send message"
-          >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <button
+              type="submit"
+              className="send-button"
+              disabled={!inputText.trim() || loading}
+              title="Send message"
             >
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
-        </div>
-      </form>
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </form>
+        )}
+      </div>
       </div>
     </div>
   )

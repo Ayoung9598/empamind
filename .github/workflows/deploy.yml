@@ -95,13 +95,20 @@ jobs:
 
       - name: Terraform Plan
         run: |
+          PLAN_ARGS=""
           # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
           if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
-            terraform plan -var="frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}" -out=tfplan
+            PLAN_ARGS="$PLAN_ARGS -var=\"frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}\""
           else
             echo "Warning: S3_BUCKET_NAME secret not set. Frontend module will not be created."
-            terraform plan -out=tfplan
           fi
+          # Use TRANSCRIBE_BUCKET_NAME secret to tell Terraform what bucket to create
+          if [ -n "${{ secrets.TRANSCRIBE_BUCKET_NAME }}" ]; then
+            PLAN_ARGS="$PLAN_ARGS -var=\"transcribe_bucket_name=${{ secrets.TRANSCRIBE_BUCKET_NAME }}\""
+          else
+            echo "Info: TRANSCRIBE_BUCKET_NAME secret not set. Voice features will not work until bucket is created."
+          fi
+          terraform plan $PLAN_ARGS -out=tfplan
         continue-on-error: true
         id: plan
 
@@ -135,6 +142,7 @@ jobs:
           USER_POOL_CLIENT_ID=$(terraform output -raw user_pool_client_id 2>/dev/null || echo "")
           API_ENDPOINT=$(terraform output -raw api_endpoint 2>/dev/null || echo "")
           CHAT_TABLE=$(terraform output -raw chat_table_name 2>/dev/null || echo "")
+          TRANSCRIBE_BUCKET=$(terraform output -raw transcribe_bucket_name 2>/dev/null || echo "")
           if [ -n "$USER_POOL_ID" ]; then
             echo "- **User Pool ID**: \`$USER_POOL_ID\`" >> $GITHUB_STEP_SUMMARY
           fi
@@ -146,6 +154,9 @@ jobs:
           fi
           if [ -n "$CHAT_TABLE" ]; then
             echo "- **Chat Table**: \`$CHAT_TABLE\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          if [ -n "$TRANSCRIBE_BUCKET" ] && [ "$TRANSCRIBE_BUCKET" != "null" ]; then
+            echo "- **Transcribe Bucket**: \`$TRANSCRIBE_BUCKET\`" >> $GITHUB_STEP_SUMMARY
           fi
         continue-on-error: true
 

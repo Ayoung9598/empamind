@@ -17,6 +17,13 @@ resource "aws_iam_role_policy" "lambda_custom" {
         Action = [
           "bedrock:InvokeModel",
           "comprehend:DetectSentiment",
+          "transcribe:StartTranscriptionJob",
+          "transcribe:GetTranscriptionJob",
+          "transcribe:DeleteTranscriptionJob",
+          "polly:SynthesizeSpeech",
+          "s3:PutObject",
+          "s3:GetObject",
+          "s3:DeleteObject",
           "dynamodb:PutItem",
           "dynamodb:Query",
           "dynamodb:GetItem",

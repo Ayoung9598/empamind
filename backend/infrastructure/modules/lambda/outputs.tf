@@ -73,3 +73,18 @@ output "delete_chat_name" {
   value       = aws_lambda_function.delete_chat.function_name
 }
 
+output "send_voice_message_arn" {
+  description = "Send Voice Message Lambda function ARN"
+  value       = aws_lambda_function.send_voice_message.arn
+}
+
+output "send_voice_message_invoke_arn" {
+  description = "Send Voice Message Lambda invoke ARN for API Gateway"
+  value       = aws_lambda_function.send_voice_message.invoke_arn
+}
+
+output "send_voice_message_name" {
+  description = "Send Voice Message Lambda function name"
+  value       = aws_lambda_function.send_voice_message.function_name
+}
+

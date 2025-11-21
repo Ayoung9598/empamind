@@ -18,3 +18,9 @@ variable "environment" {
   type        = string
 }
 
+variable "transcribe_bucket_name" {
+  description = "S3 bucket name for Transcribe temporary audio storage (optional)"
+  type        = string
+  default     = ""
+}
+

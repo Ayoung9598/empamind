@@ -35,3 +35,9 @@ output "frontend_cloudfront_url" {
   value       = var.frontend_bucket_name != "" ? module.frontend[0].cloudfront_url : null
 }
 
+# Transcribe Bucket Output
+output "transcribe_bucket_name" {
+  description = "S3 bucket name for Transcribe audio storage"
+  value       = var.transcribe_bucket_name != "" ? module.transcribe[0].bucket_name : null
+}
+

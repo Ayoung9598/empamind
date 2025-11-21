@@ -68,3 +68,13 @@ variable "user_pool_client_id" {
   type        = string
 }
 
+variable "send_voice_message_invoke_arn" {
+  description = "Send Voice Message Lambda invoke ARN for API Gateway"
+  type        = string
+}
+
+variable "send_voice_message_name" {
+  description = "Send Voice Message Lambda function name"
+  type        = string
+}
+

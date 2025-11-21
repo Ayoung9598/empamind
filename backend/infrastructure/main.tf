@@ -72,13 +72,15 @@ module "dynamodb" {
 module "lambda" {
   source = "./modules/lambda"
 
-  aws_region       = var.aws_region
-  chat_table_name  = module.dynamodb.table_name
-  bedrock_model_id = var.bedrock_model_id
-  environment      = var.environment
+  aws_region          = var.aws_region
+  chat_table_name     = module.dynamodb.table_name
+  bedrock_model_id    = var.bedrock_model_id
+  transcribe_bucket_name = var.transcribe_bucket_name != "" ? module.transcribe[0].bucket_name : ""
+  environment         = var.environment
 
   depends_on = [
-    module.dynamodb
+    module.dynamodb,
+    module.transcribe
   ]
 }
 
@@ -97,14 +99,26 @@ module "api_gateway" {
   get_chat_name           = module.lambda.get_chat_name
   update_chat_invoke_arn  = module.lambda.update_chat_invoke_arn
   update_chat_name        = module.lambda.update_chat_name
-  delete_chat_invoke_arn  = module.lambda.delete_chat_invoke_arn
-  delete_chat_name        = module.lambda.delete_chat_name
-  environment             = var.environment
+  delete_chat_invoke_arn          = module.lambda.delete_chat_invoke_arn
+  delete_chat_name                = module.lambda.delete_chat_name
+  send_voice_message_invoke_arn    = module.lambda.send_voice_message_invoke_arn
+  send_voice_message_name          = module.lambda.send_voice_message_name
+  environment                      = var.environment
 
   depends_on = [
     module.cognito,
     module.lambda
   ]
+}
+
+# Module for Transcribe S3 Bucket
+module "transcribe" {
+  count = var.transcribe_bucket_name != "" ? 1 : 0
+
+  source = "./modules/transcribe"
+
+  bucket_name = var.transcribe_bucket_name
+  environment = var.environment
 }
 
 # Module for Frontend Hosting (S3 + CloudFront)

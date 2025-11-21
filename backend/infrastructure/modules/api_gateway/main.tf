@@ -4,12 +4,13 @@ data "aws_region" "current" {}
 # Use templatefile() to process Swagger file with variables
 locals {
   swagger_body = templatefile("${path.module}/api.yaml", {
-    send_message_invoke_arn = var.send_message_invoke_arn
-    list_chats_invoke_arn   = var.list_chats_invoke_arn
-    get_chat_invoke_arn     = var.get_chat_invoke_arn
-    update_chat_invoke_arn  = var.update_chat_invoke_arn
-    delete_chat_invoke_arn  = var.delete_chat_invoke_arn
-    user_pool_arn           = var.user_pool_arn
+    send_message_invoke_arn      = var.send_message_invoke_arn
+    list_chats_invoke_arn        = var.list_chats_invoke_arn
+    get_chat_invoke_arn          = var.get_chat_invoke_arn
+    update_chat_invoke_arn       = var.update_chat_invoke_arn
+    delete_chat_invoke_arn       = var.delete_chat_invoke_arn
+    send_voice_message_invoke_arn = var.send_voice_message_invoke_arn
+    user_pool_arn                = var.user_pool_arn
   })
 }
 
@@ -108,6 +109,14 @@ resource "aws_lambda_permission" "delete_chat" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
   function_name = var.delete_chat_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "send_voice_message" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = var.send_voice_message_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
 }

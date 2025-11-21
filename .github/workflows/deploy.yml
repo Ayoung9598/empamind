@@ -98,13 +98,13 @@ jobs:
           PLAN_ARGS=""
           # Use S3_BUCKET_NAME secret to tell Terraform what bucket to create
           if [ -n "${{ secrets.S3_BUCKET_NAME }}" ]; then
-            PLAN_ARGS="$PLAN_ARGS -var=\"frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}\""
+            PLAN_ARGS="$PLAN_ARGS -var=frontend_bucket_name=${{ secrets.S3_BUCKET_NAME }}"
           else
             echo "Warning: S3_BUCKET_NAME secret not set. Frontend module will not be created."
           fi
           # Use TRANSCRIBE_BUCKET_NAME secret to tell Terraform what bucket to create
           if [ -n "${{ secrets.TRANSCRIBE_BUCKET_NAME }}" ]; then
-            PLAN_ARGS="$PLAN_ARGS -var=\"transcribe_bucket_name=${{ secrets.TRANSCRIBE_BUCKET_NAME }}\""
+            PLAN_ARGS="$PLAN_ARGS -var=transcribe_bucket_name=${{ secrets.TRANSCRIBE_BUCKET_NAME }}"
           else
             echo "Info: TRANSCRIBE_BUCKET_NAME secret not set. Voice features will not work until bucket is created."
           fi

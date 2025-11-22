@@ -1,31 +1,3 @@
-# EmpaMind
-
-AI-powered mental wellness companion for Nigerians and Africans.
-
-## Quick Start (Frontend Only - UI Testing)
-
-To test the frontend UI locally without deploying to AWS:
-
-### Option 1: Docker (Recommended)
-```bash
-docker-compose up frontend
-```
-Then open http://localhost:3000
-
-### Option 2: Without Docker
-```bash
-cd frontend
-npm install
-npm run dev
-```
-Then open http://localhost:3000
-
-**Note:** Authentication and API calls won't work without backend deployment, but you can see and test all UI components.
-
-See [LOCAL_DEV.md](./LOCAL_DEV.md) for detailed local development guide.
-
----
-
 # EmpaMind - AI Mental Wellness Companion
 
 EmpaMind is an AI-powered mental wellness companion built for Nigerians and Africans, designed to help users express their emotions, find comfort, and receive empathetic support through chat conversations.
@@ -44,7 +16,7 @@ EmpaMind is an AI-powered mental wellness companion built for Nigerians and Afri
 ### Frontend
 - React with Vite
 - AWS Amplify for Cognito integration
-- Modern, responsive UI
+- Modern, responsive UI ("Midnight Aurora" theme)
 
 ### Backend
 - AWS Lambda (Python 3.11 with boto3)
@@ -55,71 +27,79 @@ EmpaMind is an AI-powered mental wellness companion built for Nigerians and Afri
 - Amazon Cognito (authentication)
 - Terraform (Infrastructure as Code)
 
-## Getting Started
+---
 
-### Prerequisites
+## Quick Start
 
-- Node.js 18+ and npm
-- AWS account with appropriate permissions
-- AWS CLI configured
-- AWS SAM CLI (for backend deployment)
+### 1. Frontend Only (UI Testing)
 
-### Frontend Setup
+To test the frontend UI locally without deploying to AWS:
 
-1. Navigate to frontend directory:
+**Option 1: Docker (Recommended)**
+```bash
+docker-compose up frontend
+```
+Then open http://localhost:3000
+
+**Option 2: Without Docker**
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
-
-3. Create `.env` file (copy from `.env.example`):
-```bash
-cp .env.example .env
-```
-
-4. Update `.env` with your AWS values (after backend deployment):
-```
-VITE_COGNITO_USER_POOL_ID=your-user-pool-id
-VITE_COGNITO_USER_POOL_CLIENT_ID=your-client-id
-VITE_API_ENDPOINT=https://your-api-gateway-url.execute-api.region.amazonaws.com/prod
-VITE_AWS_REGION=us-east-1
-```
-
-5. Start development server:
-```bash
 npm run dev
 ```
+Then open http://localhost:3000
 
-### Backend Setup
+**Note:** Authentication and API calls won't work without backend deployment, but you can test all UI components.
 
-1. Navigate to infrastructure directory:
+### 2. Full Stack Deployment (AWS)
+
+#### Prerequisites
+- AWS Account with admin access
+- AWS CLI installed and configured (`aws configure`)
+- Terraform >= 1.0 installed
+- Node.js 18+ and npm
+
+#### Step 1: Deploy Backend
 ```bash
 cd backend/infrastructure
-```
-
-2. Configure Terraform (optional):
-```bash
-cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars if needed
-```
-
-3. Initialize and deploy:
-```bash
 terraform init
 terraform plan
 terraform apply
 ```
+Copy the outputs (`user_pool_id`, `user_pool_client_id`, `api_endpoint`).
 
-4. Note the outputs from deployment:
-   - user_pool_id
-   - user_pool_client_id
-   - api_endpoint
+#### Step 2: Configure Frontend
+Create `frontend/.env.local` with the values from Terraform output:
+```env
+VITE_COGNITO_USER_POOL_ID=<your_user_pool_id>
+VITE_COGNITO_USER_POOL_CLIENT_ID=<your_client_id>
+VITE_API_ENDPOINT=<your_api_endpoint>
+VITE_AWS_REGION=us-east-1
+```
 
-5. Update frontend `.env` file with these values.
+#### Step 3: Run Full Application
+```bash
+cd frontend
+npm run dev
+```
+
+---
+
+## CI/CD Pipeline
+
+EmpaMind uses **GitHub Actions** for fully automated CI/CD:
+
+1. **Backend Deployment**: Terraform applies infrastructure changes automatically.
+2. **Frontend Deployment**: Builds React app and syncs to S3 + CloudFront.
+
+### Setup GitHub Secrets
+To enable the pipeline, add these secrets to your GitHub repo:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `S3_BUCKET_NAME` (from `terraform output frontend_bucket_name`)
+- `CLOUDFRONT_DIST_ID` (optional, from `terraform output frontend_cloudfront_distribution_id`)
+
+---
 
 ## Project Structure
 
@@ -127,7 +107,7 @@ terraform apply
 empamind/
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # React components
+│   │   ├── components/      # React components (ChatInterface, Sidebar, etc.)
 │   │   ├── context/         # React context providers
 │   │   ├── services/        # API service layer
 │   │   └── App.jsx
@@ -135,23 +115,16 @@ empamind/
 ├── backend/
 │   ├── infrastructure/
 │   │   ├── main.tf          # Terraform root configuration
-│   │   ├── modules/         # Terraform modules
-│   │   │   ├── cognito/     # Cognito User Pool
-│   │   │   ├── dynamodb/   # DynamoDB table
-│   │   │   ├── lambda/     # Lambda functions
-│   │   │   ├── api_gateway/ # API Gateway
-│   │   │   ├── frontend/   # S3 + CloudFront hosting
-│   │   │   └── state/     # Terraform state storage
-│   │   └── terraform.tfvars.example
+│   │   ├── modules/         # Terraform modules (Lambda, API Gateway, DynamoDB, etc.)
+│   │   └── terraform.tfvars
 │   └── prompts/
 │       └── english-system-prompt.js
 ├── .github/workflows/
-│   ├── deploy.yml          # Automated deployment
-│   └── pr-checks.yml       # PR validation
+│   └── deploy.yml          # CI/CD workflow
 └── README.md
 ```
 
-## AWS Free Tier
+## AWS Free Tier Compliance
 
 This project is designed to stay within AWS Free Tier limits:
 - Lambda: 1M requests/month ✅
@@ -161,57 +134,9 @@ This project is designed to stay within AWS Free Tier limits:
 - S3: 5GB storage, 20K GET requests ✅
 - CloudFront: 50GB transfer, 2M requests ✅
 - Comprehend: 50K characters/month ✅
-- Bedrock: Pay-per-use (~$0.25 per 1K tokens, minimal for MVP)
+- Bedrock: Pay-per-use (Minimal cost for MVP, ~$0.25 per 1K tokens)
 
-**Expected Monthly Cost: $0-5** for MVP
-
-## Development
-
-### Frontend Development
-```bash
-cd frontend
-npm run dev
-```
-
-### Backend Testing
-```bash
-# Test Lambda functions locally (requires AWS credentials)
-cd backend/lambda/chat-handler
-python -m pytest  # If tests are added
-```
-
-## Deployment
-
-EmpaMind uses **GitHub Actions** for fully automated CI/CD with full AWS stack deployment!
-
-**Quick Start:**
-1. Deploy backend infrastructure with Terraform
-2. Add GitHub Secrets (AWS credentials, Terraform outputs)
-3. Push to `main` branch
-4. Everything deploys automatically! 🚀
-
-See **[DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md)** for complete step-by-step deployment instructions.
-
-## Environment Variables
-
-### Frontend (.env)
-- `VITE_COGNITO_USER_POOL_ID`: Cognito User Pool ID
-- `VITE_COGNITO_USER_POOL_CLIENT_ID`: Cognito Client ID
-- `VITE_API_ENDPOINT`: API Gateway endpoint URL
-- `VITE_AWS_REGION`: AWS region
-
-### Backend (Terraform)
-- All environment variables are automatically set by Terraform
-- Lambda functions receive: `AWS_REGION`, `CHAT_TABLE_NAME`, `BEDROCK_MODEL_ID`
-
-## Future Enhancements
-
-- [ ] Nigerian Pidgin language support
-- [ ] Voice mode (Polly + Transcribe)
-- [ ] Advanced emotion detection
-- [ ] Analytics dashboard
-- [ ] Mobile app (React Native)
-- [ ] Multi-session management
+**Expected Monthly Cost: $0-5** for MVP usage.
 
 ## License
 
@@ -220,4 +145,3 @@ MIT
 ## Support
 
 For issues and questions, please open an issue on the repository.
-

@@ -7,6 +7,9 @@ const AudioPlayer = ({ audioBlob, audioUrl }) => {
   const [currentTime, setCurrentTime] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
   const audioRef = useRef(null)
+  
+  // Create object URL from blob if provided - declare early so it can be used in useEffect
+  const [audioSrc, setAudioSrc] = useState(null)
 
   useEffect(() => {
     const audio = audioRef.current
@@ -86,9 +89,6 @@ const AudioPlayer = ({ audioBlob, audioUrl }) => {
   }
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  // Create object URL from blob if provided
-  const [audioSrc, setAudioSrc] = useState(null)
 
   useEffect(() => {
     if (audioBlob) {

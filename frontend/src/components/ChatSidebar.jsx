@@ -7,8 +7,10 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
   const [openMenuId, setOpenMenuId] = useState(null)
   const [editingChatId, setEditingChatId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false)
   const menuRefs = useRef({})
   const editInputRef = useRef(null)
+  const languageMenuRef = useRef(null)
 
   useEffect(() => {
     loadChatList()
@@ -20,11 +22,14 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
       if (openMenuId && menuRefs.current[openMenuId] && !menuRefs.current[openMenuId].contains(event.target)) {
         setOpenMenuId(null)
       }
+      if (showLanguageMenu && languageMenuRef.current && !languageMenuRef.current.contains(event.target)) {
+        setShowLanguageMenu(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [openMenuId])
+  }, [openMenuId, showLanguageMenu])
 
   useEffect(() => {
     // Focus input when editing starts
@@ -99,12 +104,41 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
     <div className={`chat-sidebar ${isVisible ? 'visible' : ''}`}>
       <div className="sidebar-header">
         <h3>Your Chats</h3>
-        <button onClick={startNewChat} className="new-chat-button" title="New Chat" aria-label="New Chat">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="12" y1="5" x2="12" y2="19"></line>
-            <line x1="5" y1="12" x2="19" y2="12"></line>
-          </svg>
-        </button>
+        <div className="header-actions">
+          <div className="language-selector" ref={languageMenuRef}>
+            <button 
+              className="language-button" 
+              onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+              title="Change Language"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="2" y1="12" x2="22" y2="12"></line>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+              </svg>
+            </button>
+            {showLanguageMenu && (
+              <div className="language-menu">
+                <div className="language-option active">
+                  <span className="lang-name">English</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+                <div className="language-option disabled">
+                  <span className="lang-name">Nigerian Pidgin</span>
+                  <span className="coming-soon-badge">Coming Soon</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <button onClick={startNewChat} className="new-chat-button" title="New Chat" aria-label="New Chat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       
       <div className="chat-list">
@@ -122,32 +156,46 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
             >
               <div className="chat-item-content">
                 {editingChatId === chat.chatId ? (
-                  <form
-                    onSubmit={(e) => handleEditSubmit(e, chat.chatId)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="edit-form"
-                  >
-                    <input
-                      ref={editInputRef}
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onBlur={(e) => {
-                        if (editTitle.trim()) {
-                          handleEditSubmit(e, chat.chatId)
-                        } else {
-                          handleEditCancel(e)
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          handleEditCancel(e)
-                        }
-                      }}
-                      className="edit-input"
-                      placeholder="Chat title"
-                    />
-                  </form>
+                  <div className="edit-container" onClick={(e) => e.stopPropagation()}>
+                    <form
+                      onSubmit={(e) => handleEditSubmit(e, chat.chatId)}
+                      className="edit-form"
+                    >
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') handleEditCancel(e)
+                        }}
+                        className="edit-input"
+                        placeholder="Chat title"
+                        autoFocus
+                      />
+                    </form>
+                    <div className="edit-actions">
+                      <button
+                        className="edit-action-button save"
+                        onClick={(e) => handleEditSubmit(e, chat.chatId)}
+                        title="Save"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                      </button>
+                      <button
+                        className="edit-action-button cancel"
+                        onClick={(e) => handleEditCancel(e)}
+                        title="Cancel"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
                 ) : (
                   <>
                     <h4 className="chat-title">{chat.title || 'Untitled Chat'}</h4>

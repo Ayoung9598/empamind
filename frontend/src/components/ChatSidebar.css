@@ -193,6 +193,15 @@
   align-items: center;
   position: relative;
   /* Removed overflow: hidden to allow menu to pop out */
+  z-index: 1;
+}
+
+.chat-item.menu-open {
+  z-index: 10;
+}
+
+.chat-list.has-open-menu .chat-item:not(.menu-open) {
+  pointer-events: none;
 }
 
 .chat-item:hover {
@@ -246,6 +255,7 @@
 
 /* Actions & Menu */
 .chat-item-actions {
+  position: relative;
   opacity: 0;
   transform: translateX(10px);
   transition: all 0.2s ease;
@@ -277,7 +287,7 @@
 .chat-menu {
   position: absolute;
   right: 0;
-  top: 100%;
+  top: calc(100% + 4px);
   background: #1e293b;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -286,7 +296,7 @@
   z-index: 1000; /* High z-index */
   min-width: 140px;
   animation: fadeIn 0.2s ease;
-  margin-top: 4px;
+  pointer-events: auto;
 }
 
 .menu-item {
@@ -300,6 +310,10 @@
   color: var(--text-secondary);
   background: transparent;
   text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  position: relative;
+  z-index: 1001;
 }
 
 .menu-item:hover {

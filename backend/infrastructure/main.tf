@@ -12,13 +12,14 @@ terraform {
     }
   }
 
-  backend "s3" {
-    bucket         = "empamind-terraform-state-ayomide-2025"
-    key            = "empamind/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "empamind-terraform-state-lock"
-  }
+  # Temporarily using local backend to bootstrap state bucket
+  # backend "s3" {
+  #   bucket         = "empamind-terraform-state-ayomide-2025"
+  #   key            = "empamind/terraform.tfstate"
+  #   region         = "us-east-1"
+  #   encrypt        = true
+  #   dynamodb_table = "empamind-terraform-state-lock"
+  # }
 }
 
 provider "aws" {

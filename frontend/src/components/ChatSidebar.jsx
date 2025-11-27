@@ -126,7 +126,7 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
                   </svg>
                 </div>
                 <div className="language-option disabled">
-                  <span className="lang-name">Nigerian Pidgin</span>
+                  <span className="lang-name">Yoruba</span>
                   <span className="coming-soon-badge">Coming Soon</span>
                 </div>
               </div>
@@ -141,7 +141,7 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
         </div>
       </div>
       
-      <div className="chat-list">
+      <div className={`chat-list ${openMenuId ? 'has-open-menu' : ''}`}>
         {chatList.length === 0 ? (
           <div className="empty-chat-list">
             <p>No chats yet</p>
@@ -151,7 +151,7 @@ const ChatSidebar = ({ isVisible, onClose, onChatSelect }) => {
           chatList.map((chat) => (
             <div
               key={chat.chatId}
-              className={`chat-item ${currentChatId === chat.chatId ? 'active' : ''} ${editingChatId === chat.chatId ? 'editing' : ''}`}
+              className={`chat-item ${currentChatId === chat.chatId ? 'active' : ''} ${editingChatId === chat.chatId ? 'editing' : ''} ${openMenuId === chat.chatId ? 'menu-open' : ''}`}
               onClick={() => handleChatClick(chat.chatId)}
             >
               <div className="chat-item-content">

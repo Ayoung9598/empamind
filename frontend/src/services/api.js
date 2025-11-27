@@ -32,6 +32,13 @@ const apiClient = axios.create({
   timeout: 30000,
 })
 
+// Create a separate client for voice messages with longer timeout
+// Voice processing (transcription + TTS) can take 30-60+ seconds
+const voiceApiClient = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 90000, // 90 seconds for voice messages
+})
+
 apiClient.interceptors.request.use(
   async (config) => {
     const headers = await getAuthHeaders()
@@ -49,6 +56,35 @@ apiClient.interceptors.response.use(
     if (error.response) {
       throw new Error(error.response.data?.message || error.response.data?.error || 'Request failed')
     } else if (error.request) {
+      throw new Error('Network error. Please check your connection.')
+    } else {
+      throw new Error(error.message || 'An unexpected error occurred')
+    }
+  }
+)
+
+// Apply same interceptors to voice client
+voiceApiClient.interceptors.request.use(
+  async (config) => {
+    const headers = await getAuthHeaders()
+    config.headers = { ...config.headers, ...headers }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+voiceApiClient.interceptors.response.use(
+  (response) => response.data,
+  (error) => {
+    if (error.response) {
+      throw new Error(error.response.data?.message || error.response.data?.error || 'Request failed')
+    } else if (error.request) {
+      // Check if it's a timeout
+      if (error.code === 'ECONNABORTED') {
+        throw new Error('Request timed out. Voice processing may take longer. Please try again.')
+      }
       throw new Error('Network error. Please check your connection.')
     } else {
       throw new Error(error.message || 'An unexpected error occurred')
@@ -108,7 +144,8 @@ export const sendVoiceMessage = async (audioBlob, audioFormat = 'webm', response
         if (chatId) payload.chatId = chatId
         if (title) payload.title = title
         
-        const response = await apiClient.post('/chat/voice', payload)
+        // Use voiceApiClient instead of apiClient for longer timeout
+        const response = await voiceApiClient.post('/chat/voice', payload)
         
         // If response has audio, convert base64 to blob
         if (response.audio) {

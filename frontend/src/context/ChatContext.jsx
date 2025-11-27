@@ -525,16 +525,22 @@ export const ChatProvider = ({ children }) => {
     }
 
     try {
-      await deleteChat(chatId)
-      // Clear current chat if it was deleted
+      // Optimistically update UI immediately
+      setChatList((prev) => prev.filter((chat) => chat.chatId !== chatId))
       if (currentChatId === chatId) {
         setCurrentChatId(null)
         setMessages([])
       }
-      // Reload chat list to ensure consistency with backend
+      
+      // Then call API to delete from backend
+      await deleteChat(chatId)
+      
+      // Reload chat list to ensure consistency with backend (in case of any discrepancies)
       await loadChatList()
       return true
     } catch (err) {
+      // If deletion fails, reload the list to restore the chat
+      await loadChatList()
       setError(err.message || 'Failed to delete chat')
       console.error('Failed to delete chat:', err)
       return false

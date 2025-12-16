@@ -6,6 +6,7 @@ EmpaMind is an AI-powered mental wellness companion built for Nigerians and Afri
 
 - 🤖 **AI-Powered Conversations**: Empathetic responses using Amazon Bedrock (Amazon Nova Micro)
 - 💭 **Sentiment Analysis**: Real-time emotion detection using Amazon Comprehend
+- 🎙️ **Voice Messaging**: Speech-to-text with Amazon Transcribe and text-to-speech with Amazon Polly
 - 🔐 **User Authentication**: Secure authentication with Amazon Cognito
 - 💬 **Chat History**: Persistent conversation history stored in DynamoDB
 - 📱 **Responsive Design**: Modern, mobile-friendly UI built with React
@@ -23,8 +24,11 @@ EmpaMind is an AI-powered mental wellness companion built for Nigerians and Afri
 - API Gateway (REST API)
 - Amazon Bedrock (Amazon Nova Micro)
 - Amazon Comprehend (sentiment analysis)
+- Amazon Transcribe (speech-to-text)
+- Amazon Polly (text-to-speech)
 - Amazon DynamoDB (chat storage)
 - Amazon Cognito (authentication)
+- Amazon S3 (audio file storage)
 - Terraform (Infrastructure as Code)
 
 ---
@@ -134,9 +138,11 @@ This project is designed to stay within AWS Free Tier limits:
 - S3: 5GB storage, 20K GET requests ✅
 - CloudFront: 50GB transfer, 2M requests ✅
 - Comprehend: 50K characters/month ✅
+- Transcribe: 60 minutes/month (first year) ⚠️
+- Polly: 5M characters/month (first year) ⚠️
 - Bedrock: Pay-per-use (Minimal cost for MVP, ~$0.25 per 1K tokens)
 
-**Expected Monthly Cost: $0-5** for MVP usage.
+**Expected Monthly Cost: $0-5** for MVP usage (may increase slightly with heavy voice usage after first year).
 
 ## License
 

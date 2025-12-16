@@ -148,6 +148,13 @@ This project is designed to stay within AWS Free Tier limits:
 
 MIT
 
+## Author
+
+**Ayomide Abiola**
+
+- 📧 Email: [abiolateslim1@gmail.com](mailto:abiolateslim1@gmail.com)
+- 💼 LinkedIn: [linkedin.com/in/ayomide-abiola-77381a262](https://linkedin.com/in/ayomide-abiola-77381a262)
+
 ## Support
 
 For issues and questions, please open an issue on the repository.
